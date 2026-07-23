@@ -162,3 +162,41 @@ class DailyCheckin(db.Model):
     reviewed_count: Mapped[int] = mapped_column(Integer, default=0)
     new_words_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ─── AI & Translation Models ──────────────────────────
+
+class AISettings(db.Model):
+    __tablename__ = "ai_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    api_key: Mapped[str] = mapped_column(String(500), default="")
+    api_base_url: Mapped[str] = mapped_column(String(300), default="https://api.deepseek.com")
+    model_name: Mapped[str] = mapped_column(String(100), default="deepseek-chat")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class TranslationPassage(db.Model):
+    __tablename__ = "translation_passages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    attempts = relationship("TranslationAttempt", back_populates="passage",
+                            cascade="all, delete-orphan", order_by="TranslationAttempt.created_at.desc()")
+
+
+class TranslationAttempt(db.Model):
+    __tablename__ = "translation_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    passage_id: Mapped[int] = mapped_column(ForeignKey("translation_passages.id"), nullable=False)
+    user_translation: Mapped[str] = mapped_column(Text, default="")
+    ai_score: Mapped[int] = mapped_column(Integer, default=0)
+    ai_feedback: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    passage = relationship("TranslationPassage", back_populates="attempts")

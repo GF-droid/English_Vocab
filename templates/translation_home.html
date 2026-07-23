@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}📝 翻译练习 — 记单词{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">📝 翻译练习</h4>
+    <a href="{{ url_for('translation.import_passage') }}" class="btn btn-primary">
+        ➕ 导入文章
+    </a>
+</div>
+
+{% if passages %}
+<div class="row g-3">
+    {% for item in passages %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 fade-in-up">
+            <div class="card-body">
+                <h6 class="card-title">{{ item.passage.title }}</h6>
+                <p class="small text-muted">
+                    {{ item.passage.content[:100] }}{% if item.passage.content|length > 100 %}...{% endif %}
+                </p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        {% if item.best_score is not none %}
+                            <span class="badge bg-{{ 'success' if item.best_score >= 80 else 'warning' if item.best_score >= 60 else 'danger' }}">
+                                最佳 {{ item.best_score }} 分
+                            </span>
+                        {% endif %}
+                        <small class="text-muted ms-2">{{ item.attempt_count }} 次练习</small>
+                    </div>
+                    <a href="{{ url_for('translation.practice', passage_id=item.passage.id) }}"
+                       class="btn btn-sm btn-outline-primary">开始练习</a>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent d-flex justify-content-between small text-muted">
+                <span>{{ item.passage.created_at.strftime('%Y-%m-%d') }}</span>
+                <form method="post" action="{{ url_for('translation.delete_passage', passage_id=item.passage.id) }}"
+                      onsubmit="return confirm('确定删除这篇文章及所有练习记录？')" class="d-inline">
+                    <button type="submit" class="btn btn-sm text-danger p-0">🗑️</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card text-center p-5 text-muted">
+    <p class="fs-5 mb-3">📝 还没有翻译练习</p>
+    <p>导入一篇英文文章或句子开始练习翻译吧</p>
+    <a href="{{ url_for('translation.import_passage') }}" class="btn btn-primary">➕ 导入第一篇文章</a>
+</div>
+{% endif %}
+{% endblock %}

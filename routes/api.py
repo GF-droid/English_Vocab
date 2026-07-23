@@ -5,6 +5,7 @@ import json
 from datetime import date, datetime, timedelta
 from flask import Blueprint, request, jsonify, Response
 from models import db, Word, WordBook, WordBookItem, LearningRecord, WrongAnswer, DailyCheckin, SimilarWordGroup, SimilarWordItem
+from models import TranslationPassage, TranslationAttempt
 from gtts import gTTS
 import os
 import requests
@@ -319,6 +320,43 @@ def lookup_online():
 
         data = resp.json()
         result = _parse_dict_response(data)
+<<<<<<< HEAD
+=======
+
+        # Collect texts to translate in parallel
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        # Translate the word itself (get multiple translations from matches)
+        word_translations = _translate_word_multi(word)
+
+        # Translate all definitions (max 3 per POS) in parallel
+        def_texts = []
+        for meaning in result["meanings"]:
+            for def_item in meaning["definitions"][:3]:
+                if def_item["definition"]:
+                    def_texts.append(def_item["definition"])
+
+        translations = {}
+        if def_texts:
+            with ThreadPoolExecutor(max_workers=6) as executor:
+                futures = {executor.submit(_translate_text, t): t for t in def_texts}
+                for future in as_completed(futures, timeout=10):
+                    try:
+                        original = futures[future]
+                        translations[original] = future.result()
+                    except Exception:
+                        pass
+
+        # Apply word translations
+        result["word_translations"] = word_translations
+
+        # Apply definition translations to ALL definitions
+        for meaning in result["meanings"]:
+            for def_item in meaning["definitions"][:3]:
+                if def_item["definition"] in translations:
+                    def_item["translation"] = translations[def_item["definition"]]
+
+>>>>>>> c2d2b6d (添加了API导入以及翻译学习功能)
         result["success"] = True
         return jsonify(result)
 
@@ -431,3 +469,253 @@ def import_online_word():
         "message": f"单词 \"{word_text}\" 已添加",
         "word_id": word_obj.id,
     })
+
+
+# ─── AI Chat ──────────────────────────────────────────
+
+@api_bp.route("/ai-test", methods=["POST"])
+def ai_test():
+    """Test AI API connectivity with current settings. Returns detailed diagnostics."""
+    data = request.get_json() or {}
+    api_key = data.get("api_key", "").strip()
+    base_url = data.get("api_base_url", "").strip()
+    model = data.get("model_name", "").strip()
+
+    # Use provided values or fall back to database
+    if not api_key or not base_url:
+        from routes.ai_helper import get_ai_settings
+        db_key, db_url, db_model = get_ai_settings()
+        if not api_key:
+            api_key = db_key
+        if not base_url:
+            base_url = db_url
+        if not model:
+            model = db_model
+
+    if not api_key:
+        return jsonify({"success": False, "message": "请先填写 API Key", "stage": "validation"})
+
+    if not base_url:
+        return jsonify({"success": False, "message": "请先选择 AI 服务商或填写 API Base URL", "stage": "validation"})
+
+    import re
+    base = base_url.rstrip('/')
+    if re.search(r'/v\d+$', base):
+        url = base + '/chat/completions'
+    else:
+        url = base + '/v1/chat/completions'
+
+    payload = {
+        "model": model or "deepseek-chat",
+        "messages": [
+            {"role": "user", "content": "Hello! Reply with just: OK"}
+        ],
+        "max_tokens": 20,
+        "temperature": 0,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    import time
+    start = time.time()
+
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=15)
+        elapsed = round((time.time() - start) * 1000)
+
+        if resp.status_code == 200:
+            data = resp.json()
+            reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            return jsonify({
+                "success": True,
+                "message": f"✅ 连接成功！模型响应正常",
+                "stage": "done",
+                "detail": {
+                    "model": model,
+                    "base_url": base_url,
+                    "latency_ms": elapsed,
+                    "reply_preview": reply[:100],
+                    "status_code": 200,
+                }
+            })
+        elif resp.status_code == 401 or resp.status_code == 403:
+            return jsonify({
+                "success": False,
+                "message": "❌ 认证失败：API Key 无效或已过期",
+                "stage": "auth",
+                "detail": {"status_code": resp.status_code, "latency_ms": elapsed}
+            })
+        elif resp.status_code == 404:
+            return jsonify({
+                "success": False,
+                "message": "❌ 接口不存在 (404)：请检查 API Base URL 是否正确",
+                "stage": "url",
+                "detail": {"status_code": 404, "latency_ms": elapsed, "url": url}
+            })
+        else:
+            try:
+                err_body = resp.json()
+                err_msg = err_body.get("error", {}).get("message", resp.text[:300])
+            except Exception:
+                err_msg = resp.text[:300]
+            return jsonify({
+                "success": False,
+                "message": f"❌ 请求失败 (HTTP {resp.status_code}): {err_msg}",
+                "stage": "api_error",
+                "detail": {"status_code": resp.status_code, "latency_ms": elapsed, "error": err_msg}
+            })
+
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "success": False,
+            "message": "❌ 连接超时 (15s)：请检查网络或 API Base URL 是否可访问",
+            "stage": "timeout"
+        })
+    except requests.exceptions.ConnectionError as e:
+        return jsonify({
+            "success": False,
+            "message": f"❌ 无法连接到服务器：请检查 API Base URL 是否正确\n详情: {str(e)[:200]}",
+            "stage": "connection"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"❌ 未知错误: {str(e)[:300]}",
+            "stage": "unknown"
+        })
+
+
+@api_bp.route("/chat", methods=["POST"])
+def ai_chat():
+    """AI chat endpoint — sends messages to DeepSeek and returns the response."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "message": "请提供消息"})
+
+    messages = data.get("messages", [])
+    if not messages:
+        return jsonify({"success": False, "message": "消息不能为空"})
+
+    try:
+        from routes.ai_helper import call_ai, SYSTEM_PROMPT_TUTOR
+        reply = call_ai(messages, system_prompt=SYSTEM_PROMPT_TUTOR, temperature=0.8, max_tokens=2000)
+        return jsonify({"success": True, "reply": reply})
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)})
+    except RuntimeError as e:
+        return jsonify({"success": False, "message": str(e)})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"AI 调用失败: {str(e)}"})
+
+
+# ─── Translation Grading ──────────────────────────────
+
+@api_bp.route("/translation/grade", methods=["POST"])
+def grade_translation():
+    """Submit a translation for AI grading."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "message": "请提供翻译数据"})
+
+    passage_id = data.get("passage_id")
+    user_translation = data.get("user_translation", "").strip()
+
+    if not passage_id or not user_translation:
+        return jsonify({"success": False, "message": "缺少必要参数"})
+
+    passage = TranslationPassage.query.get(passage_id)
+    if not passage:
+        return jsonify({"success": False, "message": "文章不存在"})
+
+    try:
+        from routes.ai_helper import call_ai, SYSTEM_PROMPT_GRADER
+
+        prompt = f"""Original English text:
+---
+{passage.content}
+---
+
+User's Chinese translation:
+---
+{user_translation}
+---
+
+Please grade this translation and return the JSON result."""
+
+        reply = call_ai(
+            [{"role": "user", "content": prompt}],
+            system_prompt=SYSTEM_PROMPT_GRADER,
+            temperature=0.3,
+            max_tokens=3000,
+            timeout=120,
+        )
+
+        # Parse AI response as JSON
+        # Strip markdown code fences if present
+        cleaned = reply.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+
+        feedback = json.loads(cleaned)
+        score = int(feedback.get("score", 0))
+
+        # Save attempt
+        attempt = TranslationAttempt(
+            passage_id=passage_id,
+            user_translation=user_translation,
+            ai_score=score,
+            ai_feedback=json.dumps(feedback, ensure_ascii=False),
+        )
+        db.session.add(attempt)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "score": score,
+            "feedback": feedback,
+            "attempt_id": attempt.id,
+        })
+
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)})
+    except RuntimeError as e:
+        return jsonify({"success": False, "message": str(e)})
+    except json.JSONDecodeError:
+        return jsonify({
+            "success": False,
+            "message": "AI 返回格式异常，请重试",
+            "raw_reply": reply[:500] if 'reply' in dir() else "",
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": f"评分失败: {str(e)}"})
+
+
+# ─── Quick Word Lookup (combined local + online) ─────
+
+@api_bp.route("/word-quick-lookup")
+def word_quick_lookup():
+    """Combined quick lookup: local DB words + online dictionary + translation."""
+    q = request.args.get("q", "").strip()
+    if len(q) < 1:
+        return jsonify({"success": False, "message": "请输入单词"})
+
+    result = {
+        "success": True,
+        "word": q,
+        "local": [],
+        "online": None,
+    }
+
+    # Local search
+    words = Word.query.filter(
+        Word.word.ilike(f"{q}%")
+    ).limit(5).all()
+    result["local"] = [w.to_dict() for w in words]
+
+    return jsonify(result)

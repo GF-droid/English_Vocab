@@ -190,6 +190,7 @@ function doLookup() {
         });
 }
 
+<<<<<<< HEAD
 function renderLookupResult(data) {
     document.getElementById('lookupResult').style.display = 'block';
     document.getElementById('lookupWord').textContent = data.word;
@@ -219,6 +220,67 @@ function renderLookupResult(data) {
                                     ➕ 导入
                                 </button>
                             </div>
+=======
+    function renderOnlineResult(data, container) {
+        const bookOptionsHtml = [{% for book in word_books %}{id:{{ book.id }}, name:"{{ book.name|e }}"}{{ ',' if not loop.last }}{% endfor %}]
+            .map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+
+        // Pick the first definition + example for the import button
+        const firstMeaning = data.meanings[0];
+        const firstDef = firstMeaning ? firstMeaning.definitions[0] : null;
+
+        let html = '';
+
+        // ── Word header ──
+        html += `<div class="mb-3">`;
+        html += `<h5 class="mb-2 d-flex align-items-center flex-wrap gap-2">`;
+        html += `<span class="fw-bold">${escapeHtml(data.word)}</span>`;
+        if (data.word_translations && data.word_translations.length) {
+            html += data.word_translations.map(t =>
+                `<span class="badge bg-success-subtle text-success fs-6">${escapeHtml(t)}</span>`
+            ).join(' ');
+        }
+        html += `<button class="btn btn-sm btn-outline-secondary" onclick="speakWord('${escapeHtml(data.word)}')" title="朗读发音">🔊</button>`;
+        html += `<span class="badge text-bg-info">在线词条</span>`;
+        html += `</h5>`;
+        if (data.phonetic) {
+            html += `<div class="text-muted small mb-2">/${escapeHtml(data.phonetic)}/</div>`;
+        }
+        html += `</div>`;
+
+        // ── Import row (word level) ──
+        html += `<div class="card bg-light mb-3">`;
+        html += `<div class="card-body py-2">`;
+        html += `<div class="d-flex align-items-center gap-2">`;
+        html += `<span class="text-muted small me-1">📥 导入到本地词库：</span>`;
+        html += `<select class="form-select form-select-sm import-book-select" style="width:auto;">`;
+        html += `<option value="">不加入单词书</option>`;
+        html += bookOptionsHtml;
+        html += `</select>`;
+        html += `<button class="btn btn-sm btn-success import-btn"`;
+        html += `  data-word="${escapeHtml(data.word)}"`;
+        html += `  data-phonetic="${escapeHtml(data.phonetic || '')}"`;
+        html += `  data-definition="${escapeHtml(firstDef ? firstDef.definition : '')}"`;
+        html += `  data-example="${escapeHtml(firstDef ? firstDef.example || '' : '')}"`;
+        html += `  data-pos="${escapeHtml(firstMeaning ? firstMeaning.part_of_speech || '' : '')}">`;
+        html += `  ➕ 导入到本地词库</button>`;
+        html += `</div></div></div>`;
+
+        // ── Definitions ──
+        data.meanings.forEach((m) => {
+            html += `<div class="mb-3">`;
+            html += `<span class="badge bg-secondary mb-2">${escapeHtml(m.part_of_speech || '')}</span>`;
+
+            m.definitions.forEach((d, di) => {
+                html += `
+                    <div class="card bg-light mb-2">
+                        <div class="card-body py-2">
+                            <p class="mb-1"><strong>${di + 1}.</strong> ${escapeHtml(d.definition)}</p>
+                            ${d.translation ? `<p class="mb-1"><span class="badge bg-success-subtle text-success me-1">译</span><span class="text-success">${escapeHtml(d.translation)}</span></p>` : ''}
+                            ${d.example ? `<p class="small text-muted mb-1 fst-italic">"${escapeHtml(d.example)}"</p>` : ''}
+                            ${d.example_translation ? `<p class="small text-success mb-0">${escapeHtml(d.example_translation)}</p>` : ''}
+                            ${d.synonyms.length ? '<p class="small text-muted mt-1 mb-0">近义: ' + d.synonyms.slice(0,4).map(escapeHtml).join('、') + '</p>' : ''}
+>>>>>>> c2d2b6d (添加了API导入以及翻译学习功能)
                         </div>
                     </div>
                 </div>`;
@@ -229,6 +291,56 @@ function renderLookupResult(data) {
     if (!data.meanings.length) {
         html = '<p class="text-muted">未找到释义信息</p>';
     }
+<<<<<<< HEAD
+=======
+
+    // Event delegation for import button
+    document.getElementById('onlineResult').addEventListener('click', function(e) {
+        const btn = e.target.closest('.import-btn');
+        if (!btn) return;
+
+        const word = btn.dataset.word;
+        const phonetic = btn.dataset.phonetic;
+        const definition = btn.dataset.definition;
+        const example = btn.dataset.example;
+        const pos = btn.dataset.pos;
+
+        const section = btn.closest('#onlineResult');
+        const select = section.querySelector('.import-book-select');
+        const bookId = select ? select.value : '';
+
+        btn.textContent = '⏳ 导入中...';
+        btn.disabled = true;
+
+        fetch('/api/import-online-word', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                word, phonetic, definition, example,
+                part_of_speech: pos,
+                book_id: bookId || null
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                btn.textContent = data.duplicate ? '✅ 已存在' : '✅ 已导入';
+                btn.classList.remove('btn-success');
+                btn.classList.add(data.duplicate ? 'btn-outline-secondary' : 'btn-success');
+            } else {
+                alert(data.message);
+                btn.textContent = '➕ 导入到本地词库';
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            btn.textContent = '➕ 导入到本地词库';
+            btn.disabled = false;
+        });
+    });
+})();
+{% endif %}
+>>>>>>> c2d2b6d (添加了API导入以及翻译学习功能)
 
     document.getElementById('lookupMeanings').innerHTML = html;
 }

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block title %}📝 {{ passage.title }} — 翻译练习{% endblock %}
+
+{% block extra_head %}
+<style>
+#originalText .word-clickable { cursor: pointer; border-bottom: 1px dashed #667eea; transition: all 0.15s; }
+#originalText .word-clickable:hover { background: #e8ecff; border-radius: 3px; }
+.translation-error { background: #ffebee; border-bottom: 2px solid #e53935; padding: 0 2px; border-radius: 2px; }
+.translation-correct { background: #e8f5e9; padding: 0 2px; border-radius: 2px; }
+.error-detail { font-size: 0.85rem; }
+#quickLookup { position: fixed; top: 20%; right: 20px; width: 320px; z-index: 1055; display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">📝 {{ passage.title }}</h5>
+    <a href="{{ url_for('translation.home') }}" class="btn btn-sm btn-outline-secondary">← 返回列表</a>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Original text -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <h6 class="mb-0">📖 英文原文</h6>
+                <small class="text-muted">🔍 点击单词查词</small>
+            </div>
+            <div class="card-body">
+                <div id="originalText" class="lh-lg" style="font-size: 1.05rem;">
+                    {% for para in paragraphs %}
+                    <p data-paragraph="{{ loop.index0 }}">
+                        {% for word in para.split() %}
+                        {% set clean = word|trim(',.;:!?\'\"()-')|lower %}
+                        <span class="word-clickable" data-word="{{ clean }}" title="点击查词: {{ clean }}">{{ word }}</span>{#
+                        #}{% if not loop.last %} {% endif %}
+                        {% endfor %}
+                    </p>
+                    {% endfor %}
+                </div>
+                {% if passage.source %}
+                <small class="text-muted mt-2 d-block">来源: {{ passage.source }}</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Translation input -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">✍️ 你的翻译</h6></div>
+            <div class="card-body">
+                <textarea id="userTranslation" class="form-control" rows="{{ paragraphs|length * 3 }}"
+                          placeholder="在这里输入你的中文翻译...&#10;&#10;可以逐段翻译，保持与原文对应的段落结构。"></textarea>
+                <div class="mt-3 d-flex gap-2">
+                    <button id="submitBtn" class="btn btn-primary" onclick="submitTranslation()">
+                        📊 提交评分
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="clearTranslation()">清空</button>
+                </div>
+                <div id="gradingStatus" class="small mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grading result -->
+<div id="gradingResult" style="display:none;" class="mt-4">
+    <div class="card">
+        <div class="card-header bg-white d-flex justify-content-between">
+            <h6 class="mb-0">📊 AI 评分结果</h6>
+            <span id="scoreBadge" class="badge fs-6"></span>
+        </div>
+        <div class="card-body">
+            <p id="overallFeedback" class="mb-3"></p>
+            <div id="errorList"></div>
+            <hr>
+            <h6>✅ 参考译文</h6>
+            <p id="correctedVersion" class="text-success lh-lg"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Quick lookup popup -->
+<div id="quickLookup" class="card shadow">
+    <div class="card-header bg-white d-flex justify-content-between py-2">
+        <strong id="lookupWord">word</strong>
+        <button class="btn-close btn-sm" onclick="closeLookup()"></button>
+    </div>
+    <div class="card-body py-2" id="lookupBody"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ─── Word click → quick lookup ───
+document.getElementById('originalText').addEventListener('click', function(e) {
+    const span = e.target.closest('.word-clickable');
+    if (!span) return;
+    const word = span.dataset.word;
+    quickLookup(word, e.clientX, e.clientY);
+});
+
+function quickLookup(word, x, y) {
+    const popup = document.getElementById('quickLookup');
+    document.getElementById('lookupWord').textContent = word;
+    document.getElementById('lookupBody').innerHTML = '<span class="text-info">⏳ 查询中...</span>';
+    popup.style.display = 'block';
+    popup.style.top = Math.min(y - 100, window.innerHeight - 400) + 'px';
+
+    // Search local + online in parallel
+    Promise.all([
+        fetch('/api/word-suggest?q=' + encodeURIComponent(word)).then(r => r.json()),
+        fetch('/api/lookup-online?word=' + encodeURIComponent(word)).then(r => r.json())
+    ]).then(([local, online]) => {
+        let html = '';
+        // Local results
+        if (local.length) {
+            html += '<div class="mb-2"><small class="text-muted">📂 本地词库</small></div>';
+            local.forEach(w => {
+                html += `<div class="d-flex justify-content-between align-items-center mb-1">
+                    <span><strong>${escHtml(w.word)}</strong> <small class="text-muted">${escHtml(w.definition).substring(0, 60)}</small></span>
+                    <button class="btn btn-sm btn-outline-success" onclick="addToWordBook(${w.id}, '${escHtml(w.word)}')">➕</button>
+                </div>`;
+            });
+        }
+        // Online results
+        if (online.success) {
+            html += '<hr class="my-1"><div class="mb-1"><small class="text-muted">🌐 在线词典</small></div>';
+            if (online.word_translations && online.word_translations.length) {
+                html += '<p class="mb-1"><strong>译:</strong> ' + online.word_translations.map(escHtml).join('；') + '</p>';
+            }
+            if (online.meanings && online.meanings.length) {
+                online.meanings.forEach(m => {
+                    m.definitions.slice(0, 2).forEach(d => {
+                        html += `<p class="small mb-1">• ${escHtml(d.definition).substring(0, 80)}</p>`;
+                    });
+                });
+            }
+            html += `<button class="btn btn-sm btn-outline-success mt-1" onclick="importOnlineWord('${escHtml(word)}')">📥 导入到词库</button>`;
+        }
+        if (!html) html = '<p class="text-muted small">未找到结果</p>';
+        document.getElementById('lookupBody').innerHTML = html;
+    }).catch(() => {
+        document.getElementById('lookupBody').innerHTML = '<p class="text-danger small">查询失败</p>';
+    });
+}
+
+function closeLookup() {
+    document.getElementById('quickLookup').style.display = 'none';
+}
+
+function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+}
+
+// ─── Translation submission ───
+function submitTranslation() {
+    const passageId = {{ passage.id }};
+    const userTranslation = document.getElementById('userTranslation').value.trim();
+    if (!userTranslation) { alert('请先输入翻译'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    const statusEl = document.getElementById('gradingStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ AI 评分中...';
+    statusEl.innerHTML = '<span class="text-info">⏳ AI 正在评分，请稍候...</span>';
+
+    fetch('/api/translation/grade', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ passage_id: passageId, user_translation: userTranslation })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.textContent = '📊 提交评分';
+        statusEl.innerHTML = '';
+
+        if (!data.success) {
+            alert(data.message || '评分失败');
+            return;
+        }
+        renderGradingResult(data);
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.textContent = '📊 提交评分';
+        statusEl.innerHTML = `<span class="text-danger">评分失败: ${escHtml(err.message)}</span>`;
+    });
+}
+
+function renderGradingResult(data) {
+    const resultDiv = document.getElementById('gradingResult');
+    resultDiv.style.display = 'block';
+    resultDiv.scrollIntoView({ behavior: 'smooth' });
+
+    // Score badge
+    const scoreBadge = document.getElementById('scoreBadge');
+    scoreBadge.textContent = data.score + ' / 100';
+    scoreBadge.className = 'badge fs-6 ' + (
+        data.score >= 80 ? 'bg-success' : data.score >= 60 ? 'bg-warning' : 'bg-danger'
+    );
+
+    // Overall feedback
+    document.getElementById('overallFeedback').textContent = data.feedback.overall || '';
+
+    // Error list
+    const errorList = document.getElementById('errorList');
+    if (data.feedback.errors && data.feedback.errors.length) {
+        let html = '<h6 class="text-danger">❌ 错误/改进项</h6><div class="mb-3">';
+        data.feedback.errors.forEach((err, i) => {
+            html += `<div class="card bg-light mb-2"><div class="card-body py-2 error-detail">
+                <span class="badge bg-danger me-2">#${i + 1}</span>
+                <span class="translation-error">${escHtml(err.original)}</span>
+                → <span class="text-success fw-bold">${escHtml(err.corrected)}</span>
+                <br><small class="text-muted ms-4">💡 ${escHtml(err.explanation)}</small>
+            </div></div>`;
+        });
+        html += '</div>';
+        errorList.innerHTML = html;
+    } else {
+        errorList.innerHTML = '<p class="text-success">✅ 未发现明显错误，翻译得很好！</p>';
+    }
+
+    // Corrected version
+    document.getElementById('correctedVersion').textContent = data.feedback.corrected_version || '';
+}
+
+function clearTranslation() {
+    document.getElementById('userTranslation').value = '';
+    document.getElementById('gradingResult').style.display = 'none';
+}
+
+function addToWordBook(wordId, word) {
+    fetch('/words/' + wordId + '/add-to-book', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'book_id=' + encodeURIComponent('')
+    }).then(r => {
+        if (r.ok) alert('✅ "' + word + '" 已加入单词书');
+    });
+}
+
+function importOnlineWord(word) {
+    fetch('/api/import-online-word', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ word: word, definition: '', part_of_speech: '' })
+    }).then(r => r.json()).then(data => {
+        if (data.success) alert('✅ "' + word + '" 已导入');
+    });
+}
+
+// Close lookup on outside click
+document.addEventListener('click', function(e) {
+    const popup = document.getElementById('quickLookup');
+    if (popup.style.display === 'block' && !popup.contains(e.target) && !e.target.closest('.word-clickable')) {
+        popup.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

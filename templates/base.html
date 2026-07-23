@@ -56,8 +56,16 @@
                             <i class="bi bi-graph-up"></i> 统计
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('translation.home') }}">
+                            <i class="bi bi-translate"></i> 翻译练习
+                        </a>
+                    </li>
                 </ul>
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center gap-1">
+                    <a href="{{ url_for('settings.settings_page') }}" class="btn btn-sm btn-outline-light" title="设置">
+                        <i class="bi bi-gear"></i>
+                    </a>
                     <button id="themeToggle" class="btn btn-sm btn-outline-light" title="切换夜间模式">
                         <i class="bi bi-moon-stars"></i>
                     </button>
@@ -107,5 +115,233 @@
         });
     </script>
     {% block extra_scripts %}{% endblock %}
+
+    <!-- ─── AI Chat Widget ─── -->
+    <button id="chatFloatBtn" class="chat-float-btn" title="英语学习助手">
+        🤖
+    </button>
+
+    <div id="chatPanel" class="chat-panel">
+        <div class="chat-panel-header" id="chatPanelHeader">
+            <span>🤖 英语学习助手</span>
+            <button class="chat-panel-close" onclick="toggleChat()">✕</button>
+        </div>
+        <div id="chatMessages" class="chat-messages">
+            <div class="chat-message assistant">
+                <div class="chat-bubble">
+                    Hi! 我是你的英语学习助手 🎓<br>
+                    可以问我单词用法、语法、翻译等问题<br>
+                    <small class="text-muted">（请先在设置页面配置 API Key）</small>
+                </div>
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" class="form-control" placeholder="输入你的问题..."
+                   onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="btn btn-primary" onclick="sendChat()">发送</button>
+        </div>
+        <div class="chat-resize-handle" id="chatResizeHandle"></div>
+    </div>
+
+    <script>
+    // ─── Draggable Float Button ───
+    (function() {
+        const btn = document.getElementById('chatFloatBtn');
+        let dragging = false, startX, startY, startLeft, startTop;
+        let hasMoved = false;
+
+        // Restore position
+        const saved = localStorage.getItem('chat-btn-pos');
+        if (saved) {
+            const [x, y] = saved.split(',').map(Number);
+            btn.style.right = 'auto';
+            btn.style.bottom = 'auto';
+            btn.style.left = x + 'px';
+            btn.style.top = y + 'px';
+        }
+
+        btn.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return;
+            dragging = true;
+            hasMoved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = btn.offsetLeft;
+            startTop = btn.offsetTop;
+            btn.style.animation = 'none';
+            btn.style.transition = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) hasMoved = true;
+            btn.style.right = 'auto';
+            btn.style.bottom = 'auto';
+            btn.style.left = Math.max(0, Math.min(window.innerWidth - 48, startLeft + dx)) + 'px';
+            btn.style.top = Math.max(0, Math.min(window.innerHeight - 48, startTop + dy)) + 'px';
+            // Sync panel position if open
+            const panel = document.getElementById('chatPanel');
+            if (panel.classList.contains('open')) {
+                positionPanelNextToButton();
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (!dragging) return;
+            dragging = false;
+            btn.style.transition = 'transform 0.2s';
+            btn.style.animation = 'pulse 2s infinite';
+            localStorage.setItem('chat-btn-pos', btn.offsetLeft + ',' + btn.offsetTop);
+        });
+
+        btn.addEventListener('click', function(e) {
+            if (hasMoved) {
+                e.preventDefault();
+                e.stopPropagation();
+            } else {
+                toggleChat();
+            }
+        }, true);
+    })();
+
+    // ─── Resizable Chat Panel ───
+    (function() {
+        const panel = document.getElementById('chatPanel');
+        const header = document.getElementById('chatPanelHeader');
+        const resizeHandle = document.getElementById('chatResizeHandle');
+        const floatBtn = document.getElementById('chatFloatBtn');
+
+        // Default size
+        const defaults = { w: 360, h: 420 };
+        const saved = localStorage.getItem('chat-panel-size');
+        let size = saved ? JSON.parse(saved) : {};
+        size.w = size.w || defaults.w;
+        size.h = size.h || defaults.h;
+
+        function applySize() {
+            panel.style.width = size.w + 'px';
+            panel.style.height = size.h + 'px';
+        }
+
+        function saveSize() {
+            localStorage.setItem('chat-panel-size', JSON.stringify(size));
+        }
+
+        // Position panel relative to float button
+        window.positionPanelNextToButton = function() {
+            const br = floatBtn.getBoundingClientRect();
+            const panelW = panel.offsetWidth;
+            const panelH = panel.offsetHeight;
+            let left = br.right - panelW;
+            let top = br.top - panelH - 12;
+            if (left < 8) left = 8;
+            if (top < 8) top = br.bottom + 12;
+            if (top + panelH > window.innerHeight - 8) top = window.innerHeight - panelH - 8;
+            panel.style.left = left + 'px';
+            panel.style.top = top + 'px';
+            panel.style.right = 'auto';
+            panel.style.bottom = 'auto';
+        };
+
+        // Resize handle only (no separate panel drag - it follows the button)
+        let resizing = false, rsX, rsY, rsW, rsH;
+        resizeHandle.addEventListener('mousedown', function(e) {
+            resizing = true;
+            rsX = e.clientX;
+            rsY = e.clientY;
+            rsW = panel.offsetWidth;
+            rsH = panel.offsetHeight;
+            panel.style.transition = 'none';
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!resizing) return;
+            size.w = Math.max(300, Math.min(600, rsW + e.clientX - rsX));
+            size.h = Math.max(250, Math.min(700, rsH + e.clientY - rsY));
+            panel.style.width = size.w + 'px';
+            panel.style.height = size.h + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (resizing) { resizing = false; panel.style.transition = ''; saveSize(); }
+        });
+
+        applySize();
+    })();
+
+    // ─── Chat functions ───
+    let chatHistory = [];
+
+    function toggleChat() {
+        const panel = document.getElementById('chatPanel');
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) {
+            positionPanelNextToButton();
+            document.getElementById('chatInput').focus();
+        }
+    }
+
+    function sendChat() {
+        const input = document.getElementById('chatInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        appendMessage('user', msg);
+        input.value = '';
+        chatHistory.push({role: 'user', content: msg});
+
+        const typingId = appendMessage('assistant', '<em class="text-muted">思考中...</em>', true);
+
+        fetch('/api/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({messages: chatHistory})
+        })
+        .then(r => r.json())
+        .then(data => {
+            removeMessage(typingId);
+            if (data.success) {
+                appendMessage('assistant', formatChatReply(data.reply));
+                chatHistory.push({role: 'assistant', content: data.reply});
+            } else {
+                appendMessage('assistant', '⚠️ ' + data.message);
+            }
+        })
+        .catch(err => {
+            removeMessage(typingId);
+            appendMessage('assistant', '⚠️ 网络错误: ' + err.message);
+        });
+    }
+
+    function appendMessage(role, text, isTemp) {
+        const container = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        const id = 'msg-' + Date.now();
+        div.id = id;
+        div.className = 'chat-message ' + role;
+        div.innerHTML = '<div class="chat-bubble">' + text + '</div>';
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+        return isTemp ? id : null;
+    }
+
+    function removeMessage(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
+
+    function formatChatReply(text) {
+        return text
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    }
+    </script>
 </body>
 </html>

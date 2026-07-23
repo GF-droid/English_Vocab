@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}📥 导入文章 — 翻译练习{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">📥 导入文章</h4>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{{ url_for('translation.import_passage') }}">
+                    <div class="mb-3">
+                        <label class="form-label">文章标题 <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control"
+                               placeholder="如：The Fox and the Grapes" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">英文原文 <span class="text-danger">*</span></label>
+                        <textarea name="content" class="form-control" rows="12"
+                                  placeholder="粘贴英文文章或句子到这里...&#10;&#10;按段落分行，每行一段。&#10;如：&#10;The quick brown fox jumps over the lazy dog.&#10;It was a sunny day in the forest." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">来源（可选）</label>
+                        <input type="text" name="source" class="form-control"
+                               placeholder="如：新概念英语第三册、The Economist...">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">📥 导入并开始练习</button>
+                    <a href="{{ url_for('translation.home') }}" class="btn btn-outline-secondary ms-2">取消</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0">💡 提示</h6></div>
+            <div class="card-body small text-muted">
+                <ul class="mb-0">
+                    <li class="mb-2">每行作为一段，方便逐段翻译</li>
+                    <li class="mb-2">可导入新闻、小说段落、考试真题等</li>
+                    <li class="mb-2">翻译后 AI 会自动评分并标记错误</li>
+                    <li>点击原文单词可快速查词</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

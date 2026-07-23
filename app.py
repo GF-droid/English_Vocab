@@ -18,6 +18,8 @@ def create_app():
     from routes.wrong_book import wrong_book_bp
     from routes.similar import similar_bp
     from routes.api import api_bp
+    from routes.settings import settings_bp
+    from routes.translation import translation_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(study_bp, url_prefix="/study")
@@ -27,6 +29,8 @@ def create_app():
     app.register_blueprint(wrong_book_bp, url_prefix="/wrong-book")
     app.register_blueprint(similar_bp, url_prefix="/similar")
     app.register_blueprint(api_bp, url_prefix="/api")
+    app.register_blueprint(settings_bp, url_prefix="/settings")
+    app.register_blueprint(translation_bp, url_prefix="/translation")
 
     # Context processor for templates
     @app.context_processor
