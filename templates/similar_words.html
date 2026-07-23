@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}🔗 形近词记忆 — 记单词{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>🔗 形近词记忆</h4>
+    <div>
+        <a href="{{ url_for('similar.discover') }}" class="btn btn-outline-info btn-sm">
+            <i class="bi bi-magic"></i> 自动发现形近词
+        </a>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createGroupModal">
+            <i class="bi bi-plus-circle"></i> 创建形近词组
+        </button>
+    </div>
+</div>
+
+<p class="text-muted mb-4">形近词是指拼写相似的单词，容易混淆。对比学习能帮助你更准确地记忆它们。</p>
+
+<!-- Create Group Modal -->
+<div class="modal fade" id="createGroupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('similar.create_group') }}" method="post">
+                <div class="modal-header"><h5 class="modal-title">创建形近词组</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">组名 *</label>
+                        <input type="text" name="name" class="form-control" required
+                               placeholder="例如：affect / effect / infect">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <textarea name="description" class="form-control" rows="2"
+                                  placeholder="这几词的区别是什么？"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">创建</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if group_data %}
+    <div class="row g-4">
+        {% for gd in group_data %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">{{ gd.group.name }}</h6>
+                        <span class="badge bg-info">{{ gd.word_count }} 词</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if gd.group.description %}
+                    <p class="small text-muted">{{ gd.group.description }}</p>
+                    {% endif %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for w in gd.words %}
+                        <a href="{{ url_for('words.word_detail', word_id=w.id) }}" class="badge bg-light text-dark text-decoration-none p-2">
+                            {{ w.word }}
+                            <small class="text-muted">{{ w.definition[:20] }}...</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="d-flex gap-1">
+                        <a href="{{ url_for('similar.group_detail', group_id=gd.group.id) }}" class="btn btn-sm btn-outline-primary flex-fill">管理</a>
+                        <a href="{{ url_for('similar.compare', group_id=gd.group.id) }}" class="btn btn-sm btn-outline-info flex-fill">对比学习</a>
+                        <a href="{{ url_for('quiz.quiz_mc', similar_group=gd.group.id) }}" class="btn btn-sm btn-outline-success flex-fill">专项测验</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card text-center p-5 text-muted">
+        <div class="fs-1 mb-3">🔗</div>
+        <h5>还没有形近词组</h5>
+        <p>手动创建或使用自动发现功能来找出拼写相似的单词</p>
+        <div>
+            <a href="{{ url_for('similar.discover') }}" class="btn btn-primary">
+                <i class="bi bi-magic"></i> 自动发现形近词
+            </a>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createGroupModal">
+                手动创建
+            </button>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

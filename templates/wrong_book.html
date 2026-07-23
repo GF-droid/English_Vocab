@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}📖 错题本 — 记单词{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>📖 错题本</h4>
+    <div>
+        <a href="{{ url_for('quiz.quiz_mc', wrong_only=1) }}" class="btn btn-outline-primary btn-sm">选择题重测</a>
+        <a href="{{ url_for('quiz.quiz_spell', wrong_only=1) }}" class="btn btn-outline-success btn-sm">拼写重测</a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-4 col-md-2">
+        <div class="card p-3 text-center">
+            <div class="fs-4 fw-bold text-danger">{{ total_wrong_entries }}</div>
+            <small class="text-muted">总记录</small>
+        </div>
+    </div>
+    <div class="col-4 col-md-2">
+        <div class="card p-3 text-center">
+            <div class="fs-4 fw-bold text-warning">{{ unreviewed_count }}</div>
+            <small class="text-muted">未复习</small>
+        </div>
+    </div>
+    <div class="col-4 col-md-2">
+        <div class="card p-3 text-center">
+            <div class="fs-4 fw-bold">{{ mc_count }}</div>
+            <small class="text-muted">选择题</small>
+        </div>
+    </div>
+    <div class="col-4 col-md-2">
+        <div class="card p-3 text-center">
+            <div class="fs-4 fw-bold">{{ spell_count }}</div>
+            <small class="text-muted">拼写题</small>
+        </div>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="mb-3">
+    <a href="{{ url_for('wrong_book.wrong_book') }}" class="btn btn-sm {{ 'btn-primary' if not current_type else 'btn-outline-primary' }}">全部</a>
+    <a href="{{ url_for('wrong_book.wrong_book', type='mc') }}" class="btn btn-sm {{ 'btn-primary' if current_type == 'mc' else 'btn-outline-primary' }}">选择题</a>
+    <a href="{{ url_for('wrong_book.wrong_book', type='spell') }}" class="btn btn-sm {{ 'btn-primary' if current_type == 'spell' else 'btn-outline-primary' }}">拼写题</a>
+</div>
+
+{% if wrong_words %}
+    {% for item in wrong_words %}
+    <div class="card mb-3 fade-in-up">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <a href="{{ url_for('words.word_detail', word_id=item.word.id) }}" class="fs-5 fw-bold text-decoration-none">
+                        {{ item.word.word }}
+                    </a>
+                    {% if item.word.phonetic %}
+                    <span class="text-muted ms-2">{{ item.word.phonetic }}</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <span class="text-muted">{{ item.word.definition[:80] }}{% if item.word.definition|length > 80 %}...{% endif %}</span>
+                </div>
+                <div class="col-md-2">
+                    <span class="badge bg-danger">错 {{ item.total_wrong }} 次</span>
+                    {% if item.all_reviewed %}
+                    <span class="badge bg-success">已复习</span>
+                    {% else %}
+                    <span class="badge bg-warning">未复习</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-3 text-md-end mt-2 mt-md-0">
+                    <small class="text-muted me-3">{{ item.last_wrong.strftime('%m/%d %H:%M') if item.last_wrong else '' }}</small>
+                    <a href="{{ url_for('wrong_book.word_wrong_details', word_id=item.word.id) }}" class="btn btn-sm btn-outline-primary">详情</a>
+                    <form action="{{ url_for('wrong_book.mark_all_reviewed') }}" method="post" class="d-inline">
+                        <input type="hidden" name="word_id" value="{{ item.word.id }}">
+                        <button class="btn btn-sm btn-outline-success">标记已复习</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <nav>
+        <ul class="pagination justify-content-center">
+            {% for p in range(1, pagination.pages + 1) %}
+            <li class="page-item {{ 'active' if p == pagination.page }}">
+                <a class="page-link" href="{{ url_for('wrong_book.wrong_book', page=p, type=current_type) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="card text-center p-5">
+        <div class="fs-1 mb-3">🎉</div>
+        <h5>错题本是空的</h5>
+        <p class="text-muted">保持下去！来做一次测验检验学习成果吧</p>
+        <a href="{{ url_for('quiz.quiz_home') }}" class="btn btn-primary">去测验</a>
+    </div>
+{% endif %}
+{% endblock %}

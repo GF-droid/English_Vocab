@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}📥 导入导出 — 记单词{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">📥 导入 / 导出</h4>
+
+<div class="row g-4">
+    <!-- Export -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">📤 导出单词</h6></div>
+            <div class="card-body">
+                <p class="text-muted">导出你的单词数据，可用于备份或迁移</p>
+
+                <div class="mb-3">
+                    <label class="form-label">选择单词书 (可选)</label>
+                    <select class="form-select" id="exportBookId">
+                        <option value="">全部单词</option>
+                        {% for book in word_books %}
+                        <option value="{{ book.id }}">{{ book.name }} ({{ book.word_count }}词)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" onclick="exportCSV()">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> 导出 CSV
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="exportJSON()">
+                        <i class="bi bi-file-earmark-code"></i> 导出 JSON
+                    </button>
+                </div>
+
+                <div class="mt-4">
+                    <h6>CSV 格式说明</h6>
+                    <p class="small text-muted">
+                        CSV 文件包含: word, phonetic, definition, example_sentence, example_translation, part_of_speech, tags<br>
+                        可在 Excel / Google Sheets 中直接打开编辑。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">📥 导入单词</h6></div>
+            <div class="card-body">
+                <p class="text-muted">从 CSV 或 JSON 文件批量导入单词</p>
+
+                <!-- CSV Import -->
+                <div class="mb-4">
+                    <h6>从 CSV 导入</h6>
+                    <form id="csvImportForm" enctype="multipart/form-data">
+                        <div class="mb-2">
+                            <input type="file" name="file" class="form-control form-control-sm" accept=".csv" id="csvFile">
+                        </div>
+                        <div class="mb-2">
+                            <select name="book_id" class="form-select form-select-sm">
+                                <option value="">不添加到单词书</option>
+                                {% for book in word_books %}
+                                <option value="{{ book.id }}">{{ book.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="importCSV()">
+                            <i class="bi bi-upload"></i> 导入 CSV
+                        </button>
+                    </form>
+                    <div id="csvImportResult" class="mt-2"></div>
+                </div>
+
+                <hr>
+
+                <!-- JSON Import -->
+                <div class="mb-4">
+                    <h6>从 JSON 导入</h6>
+                    <form id="jsonImportForm" enctype="multipart/form-data">
+                        <div class="mb-2">
+                            <input type="file" name="file" class="form-control form-control-sm" accept=".json" id="jsonFile">
+                        </div>
+                        <div class="mb-2">
+                            <select name="book_id" class="form-select form-select-sm">
+                                <option value="">不添加到单词书</option>
+                                {% for book in word_books %}
+                                <option value="{{ book.id }}">{{ book.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="importJSON()">
+                            <i class="bi bi-upload"></i> 导入 JSON
+                        </button>
+                    </form>
+                    <div id="jsonImportResult" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sample CSV -->
+<div class="card mt-4">
+    <div class="card-header bg-white"><h6 class="mb-0">📋 CSV 导入示例格式</h6></div>
+    <div class="card-body">
+        <pre class="bg-light p-3 rounded small mb-0"><code>word,phonetic,definition,example_sentence,example_translation,part_of_speech,tags
+ubiquitous,/juːˈbɪk.wɪ.təs/,似乎无处不在的,Smartphones have become ubiquitous in modern life.,智能手机在现代生活中已无处不在。,adjective,
+ephemeral,/ɪˈfem.ər.əl/,短暂的；转瞬即逝的,The beauty of cherry blossoms is ephemeral.,樱花之美是短暂的。,adjective,
+meticulous,/məˈtɪk.jə.ləs/,一丝不苟的；细致的,She is meticulous in her research.,她在研究中一丝不苟。,adjective,</code></pre>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function exportCSV() {
+    const bookId = document.getElementById('exportBookId').value;
+    let url = '/api/export-csv';
+    if (bookId) url += `?book_id=${bookId}`;
+    window.location.href = url;
+}
+
+function exportJSON() {
+    const bookId = document.getElementById('exportBookId').value;
+    let url = '/api/export-json';
+    if (bookId) url += `?book_id=${bookId}`;
+    window.location.href = url;
+}
+
+function importCSV() {
+    const fileInput = document.getElementById('csvFile');
+    const file = fileInput.files[0];
+    if (!file) { alert('请选择CSV文件'); return; }
+
+    const formData = new FormData(document.getElementById('csvImportForm'));
+    fetch('/api/import-csv', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            const resultDiv = document.getElementById('csvImportResult');
+            if (data.success) {
+                resultDiv.innerHTML = `<div class="alert alert-success py-1 px-2 small">
+                    导入完成！新增 ${data.added} 个，跳过 ${data.skipped} 个</div>`;
+                if (data.errors.length > 0) {
+                    resultDiv.innerHTML += `<div class="alert alert-warning py-1 px-2 small">${data.errors.join('<br>')}</div>`;
+                }
+                // Reload after 1.5s
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                resultDiv.innerHTML = `<div class="alert alert-danger py-1 px-2 small">${data.message}</div>`;
+            }
+        });
+}
+
+function importJSON() {
+    const fileInput = document.getElementById('jsonFile');
+    const file = fileInput.files[0];
+    if (!file) { alert('请选择JSON文件'); return; }
+
+    const formData = new FormData(document.getElementById('jsonImportForm'));
+    fetch('/api/import-json', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            const resultDiv = document.getElementById('jsonImportResult');
+            if (data.success) {
+                resultDiv.innerHTML = `<div class="alert alert-success py-1 px-2 small">
+                    导入完成！新增 ${data.added} 个，跳过 ${data.skipped} 个</div>`;
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                resultDiv.innerHTML = `<div class="alert alert-danger py-1 px-2 small">${data.message}</div>`;
+            }
+        });
+}
+</script>
+{% endblock %}

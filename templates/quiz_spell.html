@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}✍️ 拼写测验 — 记单词{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4>✍️ 拼写测验</h4>
+    <p class="text-muted">根据中文释义写出英文单词（共 {{ total }} 题）</p>
+    <div class="quiz-progress bg-success" style="width:0%;" id="quizProgress"></div>
+</div>
+
+<div id="quizArea">
+    {% for word in words %}
+    <div class="quiz-item card fade-in-up mb-4" data-word-id="{{ word.id }}" data-correct="{{ word.word }}" data-index="{{ loop.index0 }}" {% if not loop.first %}style="display:none;"{% endif %}>
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-3">
+                <span class="badge bg-secondary">第 {{ loop.index }} / {{ total }} 题</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="playAudio({{ word.id }})">
+                    <i class="bi bi-volume-up"></i> 听发音
+                </button>
+            </div>
+
+            <div class="text-center mb-4">
+                <h4 class="text-muted">{{ word.definition }}</h4>
+                {% if word.example_sentence %}
+                <p class="text-muted fst-italic">"{{ word.example_sentence }}"</p>
+                {% endif %}
+            </div>
+
+            <div class="input-group input-group-lg">
+                <input type="text" class="form-control text-center spell-input"
+                       placeholder="输入英文单词..."
+                       data-word-id="{{ word.id }}"
+                       autocomplete="off" autocapitalize="off" spellcheck="false">
+                <button class="btn btn-success spell-submit-btn" onclick="submitAnswer({{ loop.index0 }}, {{ total }})">
+                    提交
+                </button>
+            </div>
+
+            <div class="feedback mt-3" style="display:none;">
+                <div class="correct-feedback text-center">
+                    <span class="text-success fw-bold fs-5">✅ 正确！</span>
+                </div>
+                <div class="incorrect-feedback text-center">
+                    <span class="text-danger fw-bold fs-5">❌ 错误！</span>
+                    <p class="mt-2">正确答案: <strong>{{ word.word }}</strong></p>
+                    {% if word.phonetic %}<p class="text-muted">{{ word.phonetic }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="text-center mt-3 next-step" style="display:none;">
+                <button class="btn btn-primary next-btn" onclick="goNext({{ loop.index0 }}, {{ total }})">
+                    {% if loop.last %}查看结果{% else %}下一题 →{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Results -->
+    <div class="quiz-results card text-center p-5 fade-in-up" style="display:none;">
+        <div class="fs-1 mb-3" id="resultEmoji">🎉</div>
+        <h4 id="resultTitle"></h4>
+        <p class="text-muted" id="resultSummary"></p>
+        <div class="d-flex justify-content-center gap-2 mt-3" id="resultActions"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const answers = [];
+
+function playAudio(wordId) {
+    fetch(`/api/audio/${wordId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                new Audio(data.audio_url).play();
+            }
+        });
+}
+
+// Enter key submits
+document.querySelectorAll('.spell-input').forEach(input => {
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            this.closest('.quiz-item').querySelector('.spell-submit-btn').click();
+        }
+    });
+});
+
+// Auto-focus first input
+document.querySelector('.spell-input').focus();
+
+function submitAnswer(index, total) {
+    const currentItem = document.querySelector(`.quiz-item[data-index="${index}"]`);
+    if (!currentItem) return;
+
+    const wordId = parseInt(currentItem.dataset.wordId);
+    const correct = currentItem.dataset.correct;
+    const input = currentItem.querySelector('.spell-input');
+    const userAnswer = input.value.trim();
+
+    if (!userAnswer) {
+        input.classList.add('is-invalid');
+        input.focus();
+        return;
+    }
+
+    input.classList.remove('is-invalid');
+
+    const isCorrect = userAnswer.toLowerCase() === correct.toLowerCase();
+
+    // Show feedback
+    const feedback = currentItem.querySelector('.feedback');
+    feedback.style.display = 'block';
+    if (isCorrect) {
+        feedback.querySelector('.correct-feedback').style.display = 'block';
+        feedback.querySelector('.incorrect-feedback').style.display = 'none';
+    } else {
+        feedback.querySelector('.correct-feedback').style.display = 'none';
+        feedback.querySelector('.incorrect-feedback').style.display = 'block';
+    }
+
+    // Disable input and submit button, show next button
+    input.disabled = true;
+    currentItem.querySelector('.spell-submit-btn').disabled = true;
+    currentItem.querySelector('.next-step').style.display = 'block';
+
+    answers.push({ word_id: wordId, user_answer: userAnswer });
+
+    // Update progress
+    const progress = ((answers.length) / total) * 100;
+    document.getElementById('quizProgress').style.width = progress + '%';
+}
+
+function goNext(index, total) {
+    const currentItem = document.querySelector(`.quiz-item[data-index="${index}"]`);
+    if (!currentItem) return;
+
+    currentItem.style.display = 'none';
+
+    if (index + 1 < total) {
+        const next = document.querySelector(`.quiz-item[data-index="${index + 1}"]`);
+        if (next) {
+            next.style.display = 'block';
+            const nextInput = next.querySelector('.spell-input');
+            if (nextInput) nextInput.focus();
+        }
+    } else {
+        submitResults();
+    }
+}
+
+function submitResults() {
+    fetch('/quiz/submit-spell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const results = document.querySelector('.quiz-results');
+        const accuracy = data.accuracy;
+
+        document.getElementById('resultEmoji').textContent = accuracy >= 80 ? '🎉' : accuracy >= 50 ? '💪' : '📚';
+        document.getElementById('resultTitle').textContent =
+            accuracy >= 80 ? '太棒了！' : accuracy >= 50 ? '继续加油！' : '需要更多练习！';
+        document.getElementById('resultSummary').textContent =
+            `正确: ${data.correct}/${data.total} (${accuracy}%)`;
+
+        document.getElementById('resultActions').innerHTML = `
+            <a href="/quiz/spell" class="btn btn-success">再来一次</a>
+            <a href="/quiz" class="btn btn-outline-primary">换种模式</a>
+            <a href="/wrong-book" class="btn btn-outline-danger">查看错题</a>
+        `;
+
+        results.style.display = 'block';
+        document.getElementById('quizProgress').style.width = '100%';
+    });
+}
+</script>
+{% endblock %}

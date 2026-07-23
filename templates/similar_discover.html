@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}自动发现形近词 — 记单词{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('similar.similar_home') }}" class="btn btn-sm btn-outline-secondary">← 返回</a>
+</div>
+
+<h4 class="mb-2">🔍 自动发现形近词</h4>
+<p class="text-muted mb-4">使用编辑距离算法在 {{ total_words }} 个单词中查找拼写相似的词对</p>
+
+<!-- Settings -->
+<div class="card p-3 mb-4">
+    <form action="{{ url_for('similar.discover') }}" method="get" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small">编辑距离阈值 (越小越相似)</label>
+            <select name="threshold" class="form-select">
+                <option value="1" {{ 'selected' if threshold == 1 }}>1 — 极相似</option>
+                <option value="2" {{ 'selected' if threshold == 2 }}>2 — 较相似</option>
+                <option value="3" {{ 'selected' if threshold == 3 }}>3 — 略有相似</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">最小单词长度</label>
+            <input type="number" name="min_length" class="form-control" value="{{ min_length }}" min="2" max="10">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">扫描数量上限</label>
+            <select name="limit" class="form-select">
+                <option value="50" {{ 'selected' if limit == 50 }}>50 个</option>
+                <option value="100" {{ 'selected' if limit == 100 }}>100 个</option>
+                <option value="200" {{ 'selected' if limit == 200 }}>200 个</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100">重新扫描</button>
+        </div>
+    </form>
+</div>
+
+{% if similar_pairs %}
+    <p class="mb-3">找到 <strong>{{ similar_pairs|length }}</strong> 对形近词</p>
+
+    <!-- Batch create form -->
+    <form action="{{ url_for('similar.auto_create_group') }}" method="post">
+        <div class="mb-3">
+            <input type="text" name="name" class="form-control" placeholder="可选：为新组命名...">
+        </div>
+
+        <div class="row g-3 mb-3">
+            {% for pair in similar_pairs %}
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body py-2">
+                        <label class="d-flex align-items-center">
+                            <input type="checkbox" name="word_ids" value="{{ pair.word1.id }},{{ pair.word2.id }}" class="form-check-input me-2">
+                            <span class="fw-bold">{{ pair.word1.word }}</span>
+                            <span class="mx-2 text-muted">vs</span>
+                            <span class="fw-bold">{{ pair.word2.word }}</span>
+                            <span class="badge bg-info ms-2">距离={{ pair.distance }}</span>
+                        </label>
+                        <div class="ms-4 mt-1">
+                            <small class="text-muted">{{ pair.word1.definition[:50] }}</small><br>
+                            <small class="text-muted">{{ pair.word2.definition[:50] }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-folder-plus"></i> 用选中的词对创建形近词组
+            </button>
+        </div>
+    </form>
+{% elif total_words > 0 %}
+    <div class="card text-center p-5 text-muted">
+        <p>未找到形近词对，尝试放宽阈值或增加扫描范围</p>
+    </div>
+{% endif %}
+{% endblock %}

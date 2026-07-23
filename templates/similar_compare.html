@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}对比: {{ group.name }} — 形近词{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('similar.group_detail', group_id=group.id) }}" class="btn btn-sm btn-outline-secondary">← 返回</a>
+</div>
+
+<h4 class="mb-2">📊 对比学习: {{ group.name }}</h4>
+{% if group.description %}<p class="text-muted mb-4">{{ group.description }}</p>{% endif %}
+
+<!-- Side-by-side comparison -->
+<div class="row g-4">
+    {% for word in words %}
+    <div class="col-md-{{ (12 / words|length)|round|int if words|length <= 3 else 4 }}">
+        <div class="compare-card h-100">
+            <div class="compare-word mb-3">{{ word.word }}</div>
+            {% if word.phonetic %}<p class="text-muted">{{ word.phonetic }}</p>{% endif %}
+            <hr>
+            <p class="fw-bold">{{ word.definition }}</p>
+            {% if word.example_sentence %}
+            <p class="small text-muted fst-italic">"{{ word.example_sentence }}"</p>
+            {% endif %}
+            <div class="mt-auto">
+                <button class="btn btn-sm btn-outline-primary" onclick="playAudio({{ word.id }})">
+                    <i class="bi bi-volume-up"></i> 发音
+                </button>
+                <a href="{{ url_for('words.word_detail', word_id=word.id) }}" class="btn btn-sm btn-outline-secondary">
+                    详情
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Highlight differences -->
+<div class="card mt-4">
+    <div class="card-header bg-white"><h6 class="mb-0">🔍 拼写差异分析</h6></div>
+    <div class="card-body">
+        {% for i in range(words|length) %}
+            {% for j in range(i + 1, words|length) %}
+            <div class="mb-3">
+                <strong>{{ words[i].word }} vs {{ words[j].word }}</strong>
+                <div class="mt-1">
+                    {% set w1 = words[i].word %}
+                    {% set w2 = words[j].word %}
+                    {% set max_len = [w1|length, w2|length]|max %}
+                    {% for k in range(max_len) %}
+                        {% if k < w1|length and k < w2|length and w1[k] == w2[k] %}
+                            <span class="text-success fw-bold">{{ w1[k] }}</span>
+                        {% else %}
+                            {% if k < w1|length %}<span class="text-danger fw-bold">{{ w1[k] }}</span>{% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    <span class="mx-2">|</span>
+                    {% for k in range(max_len) %}
+                        {% if k < w1|length and k < w2|length and w1[k] == w2[k] %}
+                            <span class="text-success fw-bold">{{ w2[k] }}</span>
+                        {% else %}
+                            {% if k < w2|length %}<span class="text-danger fw-bold">{{ w2[k] }}</span>{% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <small class="text-muted">绿色=相同字母，红色=不同字母</small>
+            </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="text-center mt-4">
+    <a href="{{ url_for('quiz.quiz_mc', similar_group=group.id) }}" class="btn btn-success btn-lg">
+        <i class="bi bi-pencil-square"></i> 开始专项测验
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function playAudio(wordId) {
+    fetch(`/api/audio/${wordId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) new Audio(data.audio_url).play();
+        });
+}
+</script>
+{% endblock %}

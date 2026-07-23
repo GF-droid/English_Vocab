@@ -1,0 +1,356 @@
+/* ─── Custom Properties ─── */
+:root {
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --card-hover-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    --border-radius: 12px;
+    --transition: 0.2s ease;
+}
+
+/* ─── Base ─── */
+body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background-attachment: fixed;
+}
+
+[data-bs-theme="dark"] body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background-attachment: fixed;
+}
+
+/* ─── Cards ─── */
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.card:hover {
+    box-shadow: var(--card-hover-shadow);
+}
+
+.card-header {
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+    border-bottom: none;
+}
+
+/* ─── Stat cards ─── */
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    color: #fff;
+    transition: transform var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.stat-card .stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.stat-card .stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.stat-card.mastered { background: linear-gradient(135deg, #11998e, #38ef7d); }
+.stat-card.learning { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+.stat-card.wrong    { background: linear-gradient(135deg, #f093fb, #f5576c); }
+.stat-card.streak   { background: linear-gradient(135deg, #fa709a, #fee140); }
+
+/* ─── Flashcard ─── */
+.flashcard-container {
+    perspective: 1000px;
+    margin-bottom: 2rem;
+}
+
+.flashcard {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    min-height: 280px;
+    margin: 0 auto;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+}
+
+.flashcard.flipped {
+    transform: rotateY(180deg);
+}
+
+.flashcard-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.flashcard-front {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+}
+
+.flashcard-back {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f0 100%);
+    color: #333;
+    transform: rotateY(180deg);
+}
+
+[data-bs-theme="dark"] .flashcard-back {
+    background: linear-gradient(135deg, #2d3436 0%, #3d3d3d 100%);
+    color: #e0e0e0;
+}
+
+.flashcard .word-display {
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.flashcard .phonetic-display {
+    font-size: 1.2rem;
+    opacity: 0.8;
+    margin-top: 0.5rem;
+}
+
+.flashcard .definition-display {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.flashcard .example-display {
+    font-style: italic;
+    color: #666;
+}
+
+/* ─── Rating buttons ─── */
+.rating-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.rating-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2px solid #dee2e6;
+    background: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+}
+
+.rating-btn:hover {
+    transform: scale(1.1);
+    border-color: #667eea;
+}
+
+.rating-btn.r0:hover { background: #ff6b6b; color: #fff; border-color: #ff6b6b; }
+.rating-btn.r1:hover { background: #ffa726; color: #fff; border-color: #ffa726; }
+.rating-btn.r2:hover { background: #ffd54f; color: #333; border-color: #ffd54f; }
+.rating-btn.r3:hover { background: #66bb6a; color: #fff; border-color: #66bb6a; }
+.rating-btn.r4:hover { background: #42a5f5; color: #fff; border-color: #42a5f5; }
+.rating-btn.r5:hover { background: #7c4dff; color: #fff; border-color: #7c4dff; }
+
+/* ─── Quiz options ─── */
+.quiz-option {
+    display: block;
+    padding: 1rem 1.5rem;
+    margin: 0.5rem 0;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 1.1rem;
+}
+
+.quiz-option:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.quiz-option.selected {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.quiz-option.correct {
+    border-color: #38ef7d;
+    background: rgba(56, 239, 125, 0.15);
+}
+
+.quiz-option.incorrect {
+    border-color: #f5576c;
+    background: rgba(245, 87, 108, 0.15);
+}
+
+/* ─── Word book card ─── */
+.book-cover {
+    height: 160px;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-decoration: none;
+    transition: transform var(--transition), box-shadow var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.book-cover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    color: #fff;
+}
+
+/* ─── Heatmap ─── */
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(30, 1fr);
+    gap: 3px;
+}
+
+.heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    background: #ebedf0;
+    transition: transform 0.1s;
+}
+
+[data-bs-theme="dark"] .heatmap-cell {
+    background: #2d333b;
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.5);
+    z-index: 1;
+}
+
+.heatmap-cell.l1 { background: #9be9a8; }
+.heatmap-cell.l2 { background: #40c463; }
+.heatmap-cell.l3 { background: #30a14e; }
+.heatmap-cell.l4 { background: #216e39; }
+
+[data-bs-theme="dark"] .heatmap-cell.l1 { background: #0e4429; }
+[data-bs-theme="dark"] .heatmap-cell.l2 { background: #006d32; }
+[data-bs-theme="dark"] .heatmap-cell.l3 { background: #26a641; }
+[data-bs-theme="dark"] .heatmap-cell.l4 { background: #39d353; }
+
+/* ─── Similar words compare ─── */
+.compare-card {
+    border: 2px solid #e0e0e0;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    text-align: center;
+    transition: all var(--transition);
+}
+
+.compare-card:hover {
+    border-color: #667eea;
+    box-shadow: var(--card-hover-shadow);
+}
+
+.compare-card .compare-word {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.diff-highlight {
+    background: #ffeaa7;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* ─── Progress bar ─── */
+.progress-custom {
+    height: 10px;
+    border-radius: 5px;
+}
+
+/* ─── Timed quiz indicator ─── */
+.quiz-progress {
+    height: 6px;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+    .flashcard {
+        min-height: 220px;
+    }
+
+    .flashcard .word-display {
+        font-size: 2rem;
+    }
+
+    .rating-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 0.7rem;
+    }
+
+    .stat-card .stat-number {
+        font-size: 1.8rem;
+    }
+
+    .heatmap-grid {
+        grid-template-columns: repeat(15, 1fr);
+    }
+}
+
+/* ─── Animations ─── */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.4s ease;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* ─── Print hidden ─── */
+@media print {
+    nav, .rating-buttons, .btn, footer {
+        display: none !important;
+    }
+}

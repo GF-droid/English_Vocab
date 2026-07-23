@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}选择新单词 — 记单词{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('study.study_home') }}" class="btn btn-sm btn-outline-secondary">← 返回学习页</a>
+</div>
+
+<h4 class="mb-2">📥 选择要学习的新单词</h4>
+<p class="text-muted mb-4">已学 {{ already_learned }} 个单词，从未学单词中选择添加</p>
+
+<!-- Filter -->
+<div class="mb-3">
+    <div class="btn-group btn-group-sm">
+        <a href="{{ url_for('study.new_words_select') }}" class="btn btn-outline-primary {{ 'active' if not current_book_id }}">全部</a>
+        {% for book in word_books %}
+        <a href="{{ url_for('study.new_words_select', book_id=book.id) }}" class="btn btn-outline-primary {{ 'active' if current_book_id == book.id }}">
+            {{ book.name }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+{% if words.items %}
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
+        {% for word in words.items %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h6>{{ word.word }}</h6>
+                    {% if word.phonetic %}<small class="text-muted">{{ word.phonetic }}</small>{% endif %}
+                    <p class="small text-muted mt-1 mb-2">{{ word.definition[:60] }}...</p>
+                    <form action="{{ url_for('study.add_new_word') }}" method="post">
+                        <input type="hidden" name="word_id" value="{{ word.id }}">
+                        <button class="btn btn-sm btn-success">开始学习</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if words.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% for p in range(1, words.pages + 1) %}
+            <li class="page-item {{ 'active' if p == words.page }}">
+                <a class="page-link" href="{{ url_for('study.new_words_select', page=p, book_id=current_book_id) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="card text-center p-5 text-muted">
+        <div class="fs-1 mb-3">🎉</div>
+        <h5>没有新单词了</h5>
+        <p>所有单词都已经加入学习队列！去添加更多单词吧。</p>
+        <a href="{{ url_for('words.search') }}" class="btn btn-primary">添加新单词</a>
+    </div>
+{% endif %}
+{% endblock %}

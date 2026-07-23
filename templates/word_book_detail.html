@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}{{ book.name }} — 记单词{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('word_books.book_list') }}" class="btn btn-sm btn-outline-secondary">← 返回单词书列表</a>
+</div>
+
+<div class="card mb-4" style="border-left: 4px solid {{ book.cover_color }};">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4>{{ book.name }}</h4>
+                {% if book.description %}<p class="text-muted mb-0">{{ book.description }}</p>{% endif %}
+                <small class="text-muted">{{ book.word_count }} 个单词 | 已学 {{ book.learned_count }} | 掌握 {{ book.mastered_count }}</small>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editBookModal">编辑</button>
+                <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#addWordsModal">添加单词</button>
+                <a href="{{ url_for('quiz.quiz_mc', book_id=book.id) }}" class="btn btn-primary btn-sm">测验</a>
+                <form action="{{ url_for('word_books.delete_book', book_id=book.id) }}" method="post" class="d-inline"
+                      onsubmit="return confirm('确定要删除这本单词书吗？')">
+                    <button class="btn btn-outline-danger btn-sm">删除</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Book Modal -->
+<div class="modal fade" id="editBookModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('word_books.edit_book', book_id=book.id) }}" method="post">
+                <div class="modal-header"><h5 class="modal-title">编辑单词书</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">名称</label>
+                        <input type="text" name="name" class="form-control" value="{{ book.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <textarea name="description" class="form-control" rows="2">{{ book.description }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">封面颜色</label>
+                        <input type="color" name="cover_color" class="form-control form-control-color" value="{{ book.cover_color }}">
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">保存</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Words Modal -->
+<div class="modal fade" id="addWordsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="{{ url_for('word_books.add_words_to_book', book_id=book.id) }}" method="post">
+                <div class="modal-header"><h5 class="modal-title">添加单词</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">快速添加新单词</label>
+                        <input type="text" name="word_text" class="form-control"
+                               placeholder="输入单词用逗号或换行分隔，例如：apple, banana, cherry">
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">搜索并选择已有单词</label>
+                        <input type="text" class="form-control" id="wordSearchInput"
+                               placeholder="输入单词搜索..." autocomplete="off">
+                        <div id="wordSearchResults" class="mt-2" style="max-height:300px;overflow-y:auto;"></div>
+                    </div>
+                    <input type="hidden" name="word_ids" id="selectedWordIds">
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">添加</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Words list -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h6>单词列表</h6>
+    <div class="btn-group btn-group-sm">
+        <a href="{{ url_for('word_books.book_detail', book_id=book.id, sort='added') }}" class="btn btn-outline-secondary {{ 'active' if current_sort == 'added' }}">最近添加</a>
+        <a href="{{ url_for('word_books.book_detail', book_id=book.id, sort='word') }}" class="btn btn-outline-secondary {{ 'active' if current_sort == 'word' }}">字母序</a>
+        <a href="{{ url_for('word_books.book_detail', book_id=book.id, sort='status') }}" class="btn btn-outline-secondary {{ 'active' if current_sort == 'status' }}">掌握程度</a>
+    </div>
+</div>
+
+{% if items.items %}
+    {% for item in items.items %}
+    <div class="card mb-2">
+        <div class="card-body py-2">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <a href="{{ url_for('words.word_detail', word_id=item.word.id) }}" class="fw-bold text-decoration-none">
+                        {{ item.word.word }}
+                    </a>
+                    {% if item.word.phonetic %}<small class="text-muted ms-2">{{ item.word.phonetic }}</small>{% endif %}
+                </div>
+                <div class="col-md-5">
+                    <small class="text-muted">{{ item.word.definition[:100] }}</small>
+                </div>
+                <div class="col-md-3">
+                    {% set rec = item.word.learning_record %}
+                    {% if rec %}
+                        {% if rec.status == 'mastered' %}
+                        <span class="badge bg-success">已掌握</span>
+                        {% elif rec.status == 'reviewing' %}
+                        <span class="badge bg-warning">复习中</span>
+                        {% else %}
+                        <span class="badge bg-info">学习中</span>
+                        {% endif %}
+                    {% else %}
+                    <span class="badge bg-secondary">未开始</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-1 text-end">
+                    <form action="{{ url_for('word_books.remove_word_from_book', book_id=book.id, word_id=item.word.id) }}" method="post" class="d-inline">
+                        <button class="btn btn-sm text-danger" title="从单词书中移除"><i class="bi bi-x-circle"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if items.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% for p in range(1, items.pages + 1) %}
+            <li class="page-item {{ 'active' if p == items.page }}">
+                <a class="page-link" href="{{ url_for('word_books.book_detail', book_id=book.id, page=p, sort=current_sort) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="card text-center p-4 text-muted">
+        <p class="mb-0">这本单词书还是空的，点击"添加单词"开始填充吧！</p>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let selectedIds = [];
+const wordSearchInput = document.getElementById('wordSearchInput');
+const wordSearchResults = document.getElementById('wordSearchResults');
+const selectedWordIds = document.getElementById('selectedWordIds');
+
+wordSearchInput.addEventListener('input', function() {
+    const q = this.value.trim();
+    if (q.length < 1) {
+        wordSearchResults.innerHTML = '';
+        return;
+    }
+    fetch(`/api/word-suggest?q=${encodeURIComponent(q)}`)
+        .then(r => r.json())
+        .then(words => {
+            wordSearchResults.innerHTML = words.map(w => `
+                <div class="d-flex justify-content-between align-items-center p-2 border-bottom"
+                     style="cursor:pointer;"
+                     onclick="toggleWord(${w.id}, '${w.word}')">
+                    <span><strong>${w.word}</strong> <small class="text-muted">${w.definition}</small></span>
+                    <span id="check-${w.id}">${selectedIds.includes(w.id) ? '✅' : '➕'}</span>
+                </div>
+            `).join('');
+        });
+});
+
+function toggleWord(id, word) {
+    const idx = selectedIds.indexOf(id);
+    if (idx > -1) {
+        selectedIds.splice(idx, 1);
+    } else {
+        selectedIds.push(id);
+    }
+    selectedWordIds.value = selectedIds.join(',');
+    const checkEl = document.getElementById('check-' + id);
+    if (checkEl) checkEl.textContent = selectedIds.includes(id) ? '✅' : '➕';
+}
+</script>
+{% endblock %}

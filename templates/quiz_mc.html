@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}📝 选择题测验 — 记单词{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4>📝 选择题测验</h4>
+    <p class="text-muted">选择与单词匹配的正确释义（共 {{ total }} 题）</p>
+    <div class="quiz-progress bg-primary" style="width:0%;" id="quizProgress"></div>
+</div>
+
+<div id="quizArea">
+    {% for item in quiz_words %}
+    <div class="quiz-item card fade-in-up mb-4" data-word-id="{{ item.word.id }}" data-index="{{ loop.index0 }}" {% if not loop.first %}style="display:none;"{% endif %}>
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-3">
+                <span class="badge bg-secondary">第 {{ loop.index }} / {{ total }} 题</span>
+                <button class="btn btn-sm btn-outline-secondary play-audio-btn"
+                        onclick="playAudio({{ item.word.id }})">
+                    <i class="bi bi-volume-up"></i>
+                </button>
+            </div>
+
+            <h3 class="text-center mb-4">{{ item.word.word }}</h3>
+            {% if item.word.phonetic %}
+            <p class="text-center text-muted">{{ item.word.phonetic }}</p>
+            {% endif %}
+
+            <div class="options mt-3">
+                {% for option in item.options %}
+                <div class="quiz-option" data-word-id="{{ item.word.id }}" data-option-id="{{ option.id }}" onclick="selectOption(this, {{ item.word.id }}, {{ option.id }})">
+                    {{ loop.index }}. {{ option.definition }}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="feedback mt-3" style="display:none;">
+                <div class="correct-feedback">
+                    <span class="text-success fw-bold">✅ 正确！</span>
+                    <p class="mt-1">{{ item.word.word }} — {{ item.word.definition }}</p>
+                </div>
+                <div class="incorrect-feedback">
+                    <span class="text-danger fw-bold">❌ 错误！</span>
+                    <p class="mt-1">正确答案: <strong>{{ item.word.word }}</strong> — {{ item.word.definition }}</p>
+                </div>
+            </div>
+
+            <div class="text-center mt-3 next-btn" style="display:none;">
+                <button class="btn btn-primary" onclick="nextQuestion({{ loop.index0 }}, {{ total }})">
+                    {% if loop.last %}查看结果{% else %}下一题 →{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Results -->
+    <div class="quiz-results card text-center p-5 fade-in-up" style="display:none;">
+        <div class="fs-1 mb-3" id="resultEmoji">🎉</div>
+        <h4 id="resultTitle">测验完成！</h4>
+        <p class="text-muted" id="resultSummary"></p>
+        <div class="d-flex justify-content-center gap-2 mt-3" id="resultActions"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const answers = [];
+let selectedOption = null;
+
+function playAudio(wordId) {
+    fetch(`/api/audio/${wordId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                new Audio(data.audio_url).play();
+            }
+        });
+}
+
+function selectOption(el, wordId, optionId) {
+    if (el.parentElement.querySelector('.selected')) return; // Already answered
+
+    // Clear previous selections
+    el.parentElement.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedOption = { wordId, optionId };
+
+    // Show next button
+    el.closest('.quiz-item').querySelector('.next-btn').style.display = 'block';
+}
+
+function nextQuestion(index, total) {
+    const currentItem = document.querySelector(`.quiz-item[data-index="${index}"]`);
+    if (!currentItem) return;
+
+    // Record answer
+    const wordId = parseInt(currentItem.dataset.wordId);
+    const optionEl = currentItem.querySelector('.quiz-option.selected');
+
+    if (!optionEl) {
+        alert('请先选择一个选项');
+        return;
+    }
+
+    const selectedId = parseInt(optionEl.dataset.optionId);
+    const isCorrect = wordId === selectedId;
+
+    // Show feedback
+    const feedback = currentItem.querySelector('.feedback');
+    feedback.style.display = 'block';
+    if (isCorrect) {
+        feedback.querySelector('.correct-feedback').style.display = 'block';
+        feedback.querySelector('.incorrect-feedback').style.display = 'none';
+        optionEl.classList.add('correct');
+    } else {
+        feedback.querySelector('.correct-feedback').style.display = 'none';
+        feedback.querySelector('.incorrect-feedback').style.display = 'block';
+        optionEl.classList.add('incorrect');
+        // Highlight correct answer
+        currentItem.querySelectorAll('.quiz-option').forEach(o => {
+            if (parseInt(o.dataset.optionId) === wordId) o.classList.add('correct');
+        });
+    }
+
+    // Disable all options
+    currentItem.querySelectorAll('.quiz-option').forEach(o => o.style.pointerEvents = 'none');
+
+    // Hide next button
+    currentItem.querySelector('.next-btn').style.display = 'none';
+
+    answers.push({ word_id: wordId, selected_id: selectedId });
+
+    // Update progress
+    const progress = ((index + 1) / total) * 100;
+    document.getElementById('quizProgress').style.width = progress + '%';
+
+    // Delay then move to next or show results
+    setTimeout(() => {
+        currentItem.style.display = 'none';
+
+        if (index + 1 < total) {
+            const next = document.querySelector(`.quiz-item[data-index="${index + 1}"]`);
+            if (next) next.style.display = 'block';
+        } else {
+            submitResults();
+        }
+    }, 1000);
+}
+
+function submitResults() {
+    fetch('/quiz/submit-mc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const results = document.querySelector('.quiz-results');
+        const correct = data.correct;
+        const total = data.total;
+        const accuracy = data.accuracy;
+
+        document.getElementById('resultEmoji').textContent = accuracy >= 80 ? '🎉' : accuracy >= 50 ? '💪' : '📚';
+        document.getElementById('resultTitle').textContent =
+            accuracy >= 80 ? '太棒了！' : accuracy >= 50 ? '继续加油！' : '需要更多练习！';
+        document.getElementById('resultSummary').textContent =
+            `正确: ${correct}/${total} (${accuracy}%)`;
+
+        document.getElementById('resultActions').innerHTML = `
+            <a href="/quiz/mc" class="btn btn-primary">再来一次</a>
+            <a href="/quiz" class="btn btn-outline-primary">换种模式</a>
+            <a href="/wrong-book" class="btn btn-outline-danger">查看错题</a>
+        `;
+
+        results.style.display = 'block';
+        document.getElementById('quizProgress').style.width = '100%';
+    });
+}
+</script>
+{% endblock %}

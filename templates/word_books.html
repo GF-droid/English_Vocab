@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}📚 单词书 — 记单词{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>📚 单词书</h4>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBookModal">
+        <i class="bi bi-plus-circle"></i> 创建单词书
+    </button>
+</div>
+
+<!-- Create Book Modal -->
+<div class="modal fade" id="createBookModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('word_books.create_book') }}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">创建单词书</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">名称 *</label>
+                        <input type="text" name="name" class="form-control" required
+                               placeholder="例如：CET-4 核心词汇">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">封面颜色</label>
+                        <div class="d-flex gap-2">
+                            {% for color in ['#4A90D9', '#E74C3C', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C', '#E91E63', '#607D8B'] %}
+                            <label class="color-radio">
+                                <input type="radio" name="cover_color" value="{{ color }}" {{ 'checked' if loop.first }} style="display:none;">
+                                <span class="color-swatch" style="background:{{ color }};width:32px;height:32px;border-radius:50%;display:inline-block;cursor:pointer;border:3px solid {{ '#333' if loop.first else 'transparent' }};"></span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if book_stats %}
+    <div class="row g-4">
+        {% for stat in book_stats %}
+        <div class="col-md-4 col-lg-3">
+            <div class="card h-100">
+                <a href="{{ url_for('word_books.book_detail', book_id=stat.book.id) }}" class="book-cover text-decoration-none"
+                   style="background: {{ stat.book.cover_color }}; height: 120px;">
+                    <div class="fs-2">📖</div>
+                    <strong>{{ stat.book.name }}</strong>
+                </a>
+                <div class="card-body">
+                    <small class="text-muted">{{ stat.book.word_count }} 个单词</small>
+                    {% if stat.total > 0 %}
+                    <div class="mt-2">
+                        <div class="d-flex justify-content-between small">
+                            <span>学习进度</span>
+                            <span>{{ stat.progress }}%</span>
+                        </div>
+                        <div class="progress" style="height:6px;">
+                            <div class="progress-bar" style="width:{{ stat.progress }}%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small mt-1">
+                            <span>掌握率</span>
+                            <span>{{ stat.mastery }}%</span>
+                        </div>
+                        <div class="progress" style="height:6px;">
+                            <div class="progress-bar bg-success" style="width:{{ stat.mastery }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if stat.book.description %}
+                    <small class="text-muted mt-2 d-block">{{ stat.book.description[:60] }}...</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card text-center p-5">
+        <div class="fs-1 mb-3">📚</div>
+        <h5>还没有单词书</h5>
+        <p class="text-muted">创建你的第一本单词书，开始学习之旅吧！</p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBookModal">创建单词书</button>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Color swatch selection
+document.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', function() {
+        document.querySelectorAll('.color-swatch').forEach(s => s.style.borderColor = 'transparent');
+        this.style.borderColor = '#333';
+        this.parentElement.querySelector('input').checked = true;
+    });
+});
+</script>
+{% endblock %}

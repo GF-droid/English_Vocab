@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}📝 每日学习 — 记单词{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>📝 每日记忆任务</h4>
+    <div>
+        <a href="{{ url_for('study.new_words_select') }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-plus-circle"></i> 添加新词
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        {% if due_words %}
+            <!-- Study session -->
+            <div id="studyArea">
+                {% for item in due_words %}
+                <div class="study-word card fade-in-up mb-4" data-record-id="{{ item.record_id }}" data-index="{{ loop.index0 }}" {% if not loop.first %}style="display:none;"{% endif %}>
+                    <div class="card-body">
+                        <!-- Progress indicator -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-primary">{{ loop.index }} / {{ due_words|length }}</span>
+                            <span class="badge bg-{{ 'success' if item.status == 'mastered' else 'warning' if item.status == 'reviewing' else 'info' }}">
+                                {{ {'mastered': '已掌握', 'reviewing': '复习中', 'learning': '新学'}[item.status] }}
+                            </span>
+                        </div>
+
+                        <!-- Flashcard -->
+                        <div class="flashcard-container">
+                            <div class="flashcard" id="card-{{ item.record_id }}" onclick="this.classList.toggle('flipped')">
+                                <div class="flashcard-face flashcard-front">
+                                    <div class="word-display">{{ item.word.word }}</div>
+                                    {% if item.word.phonetic %}
+                                    <div class="phonetic-display">{{ item.word.phonetic }}</div>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-light mt-3 play-audio"
+                                            onclick="event.stopPropagation(); playAudio({{ item.word.id }})">
+                                        <i class="bi bi-volume-up"></i> 发音
+                                    </button>
+                                    <small class="mt-3 opacity-75">点击卡片翻转查看释义</small>
+                                </div>
+                                <div class="flashcard-face flashcard-back">
+                                    <div class="definition-display">{{ item.word.definition }}</div>
+                                    {% if item.word.example_sentence %}
+                                    <div class="example-display mt-2">
+                                        "{{ item.word.example_sentence }}"
+                                        {% if item.word.example_translation %}
+                                        <br><small>{{ item.word.example_translation }}</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="mt-3">
+                                        <span class="badge bg-secondary">间隔: {{ item.interval }}天</span>
+                                        <span class="badge bg-secondary">复习: {{ item.repetitions }}次</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rating buttons -->
+                        <div class="rating-buttons mt-3">
+                            <span class="me-2 text-muted">你的记忆程度：</span>
+                            <button class="rating-btn r0" onclick="rateWord({{ item.record_id }}, 0)" title="完全忘记">
+                                0<br><small>忘记</small>
+                            </button>
+                            <button class="rating-btn r1" onclick="rateWord({{ item.record_id }}, 1)" title="有点印象">
+                                1<br><small>模糊</small>
+                            </button>
+                            <button class="rating-btn r2" onclick="rateWord({{ item.record_id }}, 2)" title="记得但犹豫">
+                                2<br><small>犹豫</small>
+                            </button>
+                            <button class="rating-btn r3" onclick="rateWord({{ item.record_id }}, 3)" title="努力后想起">
+                                3<br><small>努力</small>
+                            </button>
+                            <button class="rating-btn r4" onclick="rateWord({{ item.record_id }}, 4)" title="稍有犹豫">
+                                4<br><small>熟练</small>
+                            </button>
+                            <button class="rating-btn r5" onclick="rateWord({{ item.record_id }}, 5)" title="完美记忆">
+                                5<br><small>完美</small>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- All done message -->
+                <div class="study-done card text-center p-5 fade-in-up" style="display:none;">
+                    <div class="fs-1 mb-3">🎉</div>
+                    <h4>太棒了！今日任务全部完成</h4>
+                    <p class="text-muted">今天复习了 {{ due_words|length }} 个单词</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{{ url_for('quiz.quiz_home') }}" class="btn btn-primary">去测验</a>
+                        <a href="{{ url_for('study.new_words_select') }}" class="btn btn-outline-success">学习新词</a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- No due words -->
+            <div class="card text-center p-5">
+                <div class="fs-1 mb-3">🎉</div>
+                <h4>没有待复习的单词</h4>
+                <p class="text-muted">所有单词都已按计划复习完毕</p>
+                <div>
+                    <a href="{{ url_for('study.new_words_select') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> 学习新单词
+                    </a>
+                    <a href="{{ url_for('quiz.quiz_home') }}" class="btn btn-outline-primary">去测验</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white"><h6 class="mb-0">📋 学习状态</h6></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>今日已复习</span>
+                    <strong id="reviewedCount">{{ reviewed_today }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>今日待完成</span>
+                    <strong id="dueCountDisplay">{{ due_count }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>可学新词</span>
+                    <strong>{{ new_words_available }}</strong>
+                </div>
+                <hr>
+                <small class="text-muted">评分说明：</small>
+                <ul class="small text-muted mt-1">
+                    <li><strong>0-2</strong>: 忘记，隔天重新复习</li>
+                    <li><strong>3</strong>: 努力后想起，间隔缩短</li>
+                    <li><strong>4-5</strong>: 熟练，间隔延长</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-white"><h6 class="mb-0">💡 学习技巧</h6></div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li>每天坚持少量多次效果最好</li>
+                    <li>大声朗读单词和例句</li>
+                    <li>用新词造自己的句子</li>
+                    <li>结合形近词对比记忆</li>
+                    <li>在语境中记忆而非死记硬背</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentWordIndex = {{ 0 if due_words else 0 }};
+const totalDue = {{ due_words|length }};
+const wordCards = document.querySelectorAll('.study-word');
+
+function playAudio(wordId) {
+    fetch(`/api/audio/${wordId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const audio = new Audio(data.audio_url);
+                audio.play();
+            }
+        });
+}
+
+function rateWord(recordId, quality) {
+    const formData = new FormData();
+    formData.append('record_id', recordId);
+    formData.append('quality', quality);
+
+    fetch('/study/rate', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Hide current card
+            const currentCard = document.querySelector(`[data-record-id="${recordId}"]`);
+            if (currentCard) {
+                currentCard.style.display = 'none';
+            }
+
+            currentWordIndex++;
+
+            // Show next card or done message
+            if (currentWordIndex < totalDue) {
+                const nextCard = wordCards[currentWordIndex];
+                if (nextCard) {
+                    nextCard.style.display = 'block';
+                    nextCard.classList.add('fade-in-up');
+                    // Reset flip state
+                    const flashcard = nextCard.querySelector('.flashcard');
+                    if (flashcard) flashcard.classList.remove('flipped');
+                }
+            } else {
+                document.querySelector('.study-done').style.display = 'block';
+            }
+
+            // Update counts
+            document.getElementById('reviewedCount').textContent =
+                parseInt(document.getElementById('reviewedCount').textContent) + 1;
+            document.getElementById('dueCountDisplay').textContent =
+                Math.max(0, parseInt(document.getElementById('dueCountDisplay').textContent) - 1);
+        }
+    });
+}
+</script>
+{% endblock %}

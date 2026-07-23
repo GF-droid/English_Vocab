@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}🔍 搜索单词 — 记单词{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">🔍 单词搜索</h4>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#localSearch" type="button">
+            📂 本地词库搜索
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#onlineLookup" type="button">
+            🌐 在线查词 & 导入
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- ========== Local Search ========== -->
+    <div class="tab-pane fade show active" id="localSearch">
+        <!-- Search bar -->
+        <form action="{{ url_for('words.search') }}" method="get" class="card p-3 mb-4">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" name="q" class="form-control" placeholder="搜索单词或释义..." value="{{ query }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="book_id" class="form-select">
+                        <option value="">全部单词书</option>
+                        {% for book in word_books %}
+                        <option value="{{ book.id }}" {{ 'selected' if current_book_id == book.id }}>
+                            {{ book.name }} ({{ book.word_count }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">全部状态</option>
+                        <option value="mastered" {{ 'selected' if current_status == 'mastered' }}>已掌握</option>
+                        <option value="learning" {{ 'selected' if current_status == 'learning' }}>学习中</option>
+                        <option value="not_started" {{ 'selected' if current_status == 'not_started' }}>未开始</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="sort" class="form-select">
+                        <option value="word" {{ 'selected' if current_sort == 'word' }}>字母排序</option>
+                        <option value="newest" {{ 'selected' if current_sort == 'newest' }}>最近添加</option>
+                        <option value="oldest" {{ 'selected' if current_sort == 'oldest' }}>最早添加</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100">搜索</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Results -->
+        {% if words.items %}
+            <p class="text-muted mb-3">共找到 {{ words.total }} 个单词</p>
+            {% for word in words.items %}
+            <div class="card mb-2 fade-in-up">
+                <div class="card-body py-2">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('words.word_detail', word_id=word.id) }}" class="fw-bold text-decoration-none">{{ word.word }}</a>
+                            {% if word.phonetic %}<small class="text-muted ms-2">{{ word.phonetic }}</small>{% endif %}
+                            {% if word.part_of_speech %}<span class="badge bg-light text-dark ms-1">{{ word.part_of_speech }}</span>{% endif %}
+                        </div>
+                        <div class="col-md-5">
+                            <small class="text-muted">{{ word.definition[:120] }}</small>
+                        </div>
+                        <div class="col-md-3">
+                            {% set rec = word.learning_record %}
+                            {% if rec %}
+                                <span class="badge bg-{{ 'success' if rec.status == 'mastered' else 'warning' if rec.status == 'reviewing' else 'info' }}">
+                                    {{ {'mastered':'已掌握','reviewing':'复习中','learning':'学习中'}[rec.status] }}
+                                </span>
+                            {% else %}
+                            <span class="badge bg-secondary">未开始</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-1 text-end">
+                            <a href="{{ url_for('words.word_detail', word_id=word.id) }}" class="btn btn-sm text-primary"><i class="bi bi-arrow-right-circle"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% if words.pages > 1 %}
+            <nav><ul class="pagination justify-content-center">
+                {% for p in range(1, words.pages + 1) %}
+                <li class="page-item {{ 'active' if p == words.page }}">
+                    <a class="page-link" href="{{ url_for('words.search', q=query, page=p, book_id=current_book_id, status=current_status, sort=current_sort) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+            </ul></nav>
+            {% endif %}
+        {% else %}
+            <div class="card text-center p-5 text-muted">
+                {% if query %}
+                    <p class="mb-3 fs-5">本地词库中没有找到 <strong>"{{ query }}"</strong></p>
+                    <button class="btn btn-primary mb-3" onclick="switchToOnline('{{ query }}')">
+                        🌐 在线词典中查找 "{{ query }}"
+                    </button>
+                    <p class="small">使用免费在线词典 API 查询单词释义、音标和例句</p>
+                {% else %}
+                    <p>🔍 输入关键词搜索本地词库，或切换到 「在线查词 & 导入」标签从网络词典添加新词</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- ========== Online Lookup ========== -->
+    <div class="tab-pane fade" id="onlineLookup">
+        <div class="row g-4">
+            <!-- Lookup panel -->
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header bg-white"><h6 class="mb-0">🌐 在线查词</h6></div>
+                    <div class="card-body">
+                        <p class="small text-muted">使用免费词典 API，输入任意英文单词即可获取释义、音标、例句</p>
+                        <div class="input-group mb-3">
+                            <input type="text" id="lookupInput" class="form-control" placeholder="输入英文单词，如 ubiquitous" autofocus>
+                            <button class="btn btn-primary" onclick="doLookup()">查询</button>
+                        </div>
+                        <div id="lookupStatus" class="small"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result panel -->
+            <div class="col-md-7">
+                <div id="lookupResult" style="display:none;">
+                    <div class="card">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0" id="lookupWord"></h5>
+                            <span id="lookupPhonetic" class="text-muted"></span>
+                        </div>
+                        <div class="card-body" id="lookupMeanings"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Enter key triggers lookup
+document.getElementById('lookupInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doLookup();
+});
+
+// Switch to online tab and fill the search word
+function switchToOnline(word) {
+    // Switch to the online lookup tab
+    const onlineTab = document.querySelector('[data-bs-target="#onlineLookup"]');
+    const bsTab = new bootstrap.Tab(onlineTab);
+    bsTab.show();
+    // Fill and search
+    document.getElementById('lookupInput').value = word;
+    doLookup();
+}
+
+function doLookup() {
+    const word = document.getElementById('lookupInput').value.trim();
+    if (!word) return;
+
+    const statusEl = document.getElementById('lookupStatus');
+    statusEl.innerHTML = '<span class="text-info">⏳ 查询中...</span>';
+
+    fetch(`/api/lookup-online?word=${encodeURIComponent(word)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                statusEl.innerHTML = `<span class="text-danger">❌ ${data.message}</span>`;
+                document.getElementById('lookupResult').style.display = 'none';
+                return;
+            }
+            statusEl.innerHTML = '';
+            renderLookupResult(data);
+        })
+        .catch(err => {
+            statusEl.innerHTML = `<span class="text-danger">❌ 网络错误: ${err.message}</span>`;
+        });
+}
+
+function renderLookupResult(data) {
+    document.getElementById('lookupResult').style.display = 'block';
+    document.getElementById('lookupWord').textContent = data.word;
+    document.getElementById('lookupPhonetic').textContent = data.phonetic || '';
+
+    const bookOptions = [{% for book in word_books %}{id:{{ book.id }}, name:"{{ book.name }}"}{{ ',' if not loop.last }}{% endfor %}];
+
+    let html = '';
+    data.meanings.forEach((m, mi) => {
+        html += `<div class="mb-3"><span class="badge bg-secondary mb-2">${m.part_of_speech || ''}</span>`;
+        m.definitions.forEach((d, di) => {
+            html += `
+                <div class="card bg-light mb-2">
+                    <div class="card-body py-2">
+                        <p class="mb-1"><strong>${di + 1}.</strong> ${d.definition}</p>
+                        ${d.example ? `<p class="small text-muted mb-1 fst-italic">"${d.example}"</p>` : ''}
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <div>
+                                ${d.synonyms.length ? '<span class="small text-muted">近义: ' + d.synonyms.slice(0,3).join(', ') + '</span>' : ''}
+                            </div>
+                            <div class="d-flex gap-1">
+                                <select class="form-select form-select-sm" style="width:auto;" id="bookSelect-${mi}-${di}">
+                                    <option value="">不加入单词书</option>
+                                    ${bookOptions.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
+                                </select>
+                                <button class="btn btn-sm btn-success" onclick="importWord(${mi}, ${di}, '${data.word}', '${(data.phonetic || '').replace(/'/g, "\\'")}', \`${d.definition.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, \`${(d.example || '').replace(/`/g, '\\`').replace(/'/g, "\\'")}\`, '${(m.part_of_speech || '').replace(/'/g, "\\'")}')">
+                                    ➕ 导入
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        html += '</div>';
+    });
+
+    if (!data.meanings.length) {
+        html = '<p class="text-muted">未找到释义信息</p>';
+    }
+
+    document.getElementById('lookupMeanings').innerHTML = html;
+}
+
+function importWord(mi, di, word, phonetic, definition, example, pos) {
+    const bookSelect = document.getElementById(`bookSelect-${mi}-${di}`);
+    const bookId = bookSelect ? bookSelect.value : '';
+
+    fetch('/api/import-online-word', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            word, phonetic, definition, example,
+            part_of_speech: pos,
+            book_id: bookId || null
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.querySelector(`#bookSelect-${mi}-${di}`).nextElementSibling;
+            btn.textContent = data.duplicate ? '✅ 已存在' : '✅ 已导入';
+            btn.classList.remove('btn-success');
+            btn.classList.add(data.duplicate ? 'btn-outline-secondary' : 'btn-outline-success');
+            btn.disabled = true;
+        } else {
+            alert(data.message);
+        }
+    });
+}
+</script>
+{% endblock %}
