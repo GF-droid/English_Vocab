@@ -1,50 +1,51 @@
-# English Vocab 📚
+# 📚 记单词 — 智能英语词汇学习系统
 
-一个基于 Flask 的全功能英语词汇学习应用，内置 SM-2 间隔重复算法，帮助你科学高效地记忆单词。
+一个功能完整、界面美观的英语词汇学习 Web 应用。基于 **SM-2 间隔重复算法** 科学记忆单词，集成 **AI 大模型** 提供智能学习助手和翻译评分，是你学习英语的全能工具箱。
 
-## ✨ 功能特性
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue" alt="Python">
+  <img src="https://img.shields.io/badge/Flask-3.x-green" alt="Flask">
+  <img src="https://img.shields.io/badge/AI-DeepSeek%20|%20Kimi%20|%20千问%20|%20豆包-purple" alt="AI">
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
+</p>
 
-### 📖 单词管理
-- **单词 CRUD** — 添加、编辑、删除单词，支持音标、释义、例句、词性、标签
-- **多维度搜索** — 按单词、释义、词性、掌握状态筛选，支持分页
-- **在线查词** — 集成 [Free Dictionary API](https://dictionaryapi.dev/)，一键导入单词释义
-- **导入/导出** — 支持 CSV 和 JSON 格式的批量导入导出
+---
 
-### 📚 单词书
-- 创建多个单词书分类管理词汇（如"四级核心"、"考研词汇"）
-- 可视化学习进度（已学 / 已掌握百分比）
-- 支持按单词/添加时间/掌握状态排序
+## ✨ 核心功能
 
-### 🧠 间隔重复学习（SM-2）
-- 实现 [SuperMemo-2](https://en.wikipedia.org/wiki/SuperMemo) 算法
-- 根据每次复习评分（0-5）自动调整复习间隔
-- 三级掌握状态：`learning` → `reviewing` → `mastered`
-- 每日待复习单词自动排队
+### 🧠 科学记忆
+- **SM-2 间隔重复** — 实现 SuperMemo-2 算法，根据每次复习评分自动调整下次复习时间
+- **每日学习队列** — 自动推送到期单词，每次 20 个，零规划负担
+- **掌握状态追踪** — `学习中 → 复习中 → 已掌握` 三级递进，可视化进度
 
-### 📝 测验模式
-- **选择题（MC）** — 看释义选单词，支持错题重做和形近词专项
-- **拼写题（Spell）** — 看释义拼写单词
-- 自动记录错题并入错题本
+### 📝 多维测验
+- **选择题** — 看释义选单词，支持按单词书/错题/形近词范围出题
+- **拼写题** — 看释义默写单词，Levenshtein 编辑距离精确判定
+- **自动纠错** — 错题自动收录，支持按类型筛选和批量复习
 
-### 📕 错题本
-- 按单词聚合错误记录，显示错误次数和类型
-- 支持标记已复习、批量标记、删除
-- 与测验和学习模块联动
+### 📚 单词管理
+- **单词书分组** — 自由创建单词书（如"四级核心"、"考研词汇"），拖拽式管理
+- **智能搜索** — 按单词/释义/词性/掌握状态多维度筛选
+- **CSV/JSON 导入导出** — 一键备份或迁移词库
+- **在线查词** — 集成 Free Dictionary API，英文释义 + MyMemory 中文翻译，一键导入
 
-### 🔍 形近词识别
-- 基于 **Levenshtein 编辑距离** 自动发现拼写相似的单词
-- 手动创建形近词组，支持对比学习
-- 可在测验中进行形近词组专项训练
+### 🤖 AI 智能助手 *(新)*
+- **英语学习助手** — 右下角浮动气泡窗，可拖动、可缩放，随时提问
+- **多模型支持** — DeepSeek / Kimi / 通义千问 / 豆包 / 智谱 GLM 一键切换
+- **翻译练习评分** — 导入英文文章，自行翻译后 AI 自动评分，错误标红
+- **快捷查词** — 阅读中点击单词即可弹出释义，支持一键加入单词书
+- **API 连接测试** — 设置页面内置诊断工具，直观排查连接问题
 
-### 📊 学习统计
-- 仪表盘概览：待复习数、已掌握数、错题数、连续打卡天数
-- 30 天学习热力图
-- 单词书维度的学习进度
+### 📊 数据看板
+- 30 天学习热力图 + 每日复习/新词趋势图
+- 单词书维度掌握率统计
 - 错题类型分布
+- 连续打卡天数追踪
 
-### 🎤 语音朗读
-- 使用 **gTTS**（Google Text-to-Speech）自动生成单词发音
-- 按需生成并缓存 mp3 文件
+### 🎤 其他
+- **gTTS 语音合成** — 自动生成单词发音 mp3
+- **形近词识别** — 基于编辑距离自动发现易混淆单词，支持对比学习
+- **明暗主题** — 一键切换，自动记忆偏好
 
 ---
 
@@ -52,32 +53,112 @@
 
 ### 环境要求
 
-- Python 3.10+
+- Python **3.10+**
 - pip
 
-### 安装步骤
+### 安装
 
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/GF-droid/English_Vocab.git
 cd English_Vocab
 
-# 2. 创建虚拟环境
+# 2. 创建并激活虚拟环境
 python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# venv\Scripts\activate   # Windows
+source venv/bin/activate      # macOS / Linux
+# venv\Scripts\activate       # Windows
 
 # 3. 安装依赖
 pip install -r requirements.txt
 
-# 4. （可选）导入预置词汇数据
+# 4. 导入预置词汇数据（可选）
 python seed_data.py
 
-# 5. 启动应用
+# 5. 启动
 python app.py
 ```
 
-浏览器访问 **http://localhost:5000** 即可使用。
+浏览器访问 **http://localhost:5000**。
+
+---
+
+## 📖 使用教程
+
+### 1. 初始设置
+
+首次使用建议先导入词汇数据：
+
+```bash
+python seed_data.py
+```
+
+然后访问 http://localhost:5000/settings/ 配置 AI 大模型：
+
+1. 选择服务商（如 DeepSeek）
+2. 填入 API Key
+3. 点击「🔌 测试连接」验证配置
+4. 保存
+
+> 各平台均有免费额度：DeepSeek 注册送、Kimi 注册送、千问百万 Token 免费。
+
+### 2. 每日学习流程
+
+```
+📅 每天打开 → 首页查看待复习数量 → 进入「每日学习」
+→ 逐词翻卡片 → 诚实评分(0-5) → 系统自动安排下次复习
+→ 每日学习量达到后自动停止
+```
+
+评分参考：
+| 分数 | 含义 | 效果 |
+|------|------|------|
+| 0-2 | 忘记/不确定 | 间隔重置为 1 天 |
+| 3 | 努力后想起 | 间隔正常递增 |
+| 4-5 | 轻松想起 | 间隔加速递增 |
+
+### 3. 单词管理
+
+**添加单词：**
+- 搜索页 → 输入单词 → 搜索
+- 本地未找到时会自动查询在线词典，点击「导入」即可
+
+**创建单词书：**
+- 导航栏「单词书」→ 创建 → 命名选色
+- 在单词详情页或搜索结果中点击「加入单词书」
+
+**批量导入：**
+- 导航栏「导入导出」→ 上传 CSV/JSON 文件
+- CSV 格式：`word,phonetic,definition,example_sentence,example_translation,part_of_speech,tags`
+
+### 4. 测验模式
+
+- **选择题**：适合日常自测，支持限定范围（单词书/错题/形近词组）
+- **拼写题**：适合强化输出能力
+- 错题自动收录到「错题本」，可在测验中选择「仅做错题」
+
+### 5. AI 学习助手
+
+点击右下角 **🤖 浮动按钮** 打开助手：
+
+- **拖动按钮**可移动位置，弹窗会自动跟随
+- **拖动弹窗右下角手柄**可调整大小，下次打开保持
+- 可以问：单词用法、语法解析、句子翻译、作文润色等
+
+### 6. 翻译练习
+
+这是为进阶学习者设计的功能：
+
+1. **导入文章** — 翻译练习 → 导入文章 → 粘贴英文原文
+2. **开始翻译** — 左右分栏：左侧原文，右侧输入框
+3. **查词** — 点击原文中任意单词，右侧弹出释义面板
+4. **提交评分** — AI 逐句对比评分，错误部分标红并给出修改建议
+5. **复习** — 历史评分记录长期保存，可回看对比
+
+### 7. 形近词管理
+
+- 导航栏「形近词」→ 自动发现
+- 系统用编辑距离算法扫描词库，找出拼写相似的词对
+- 可手动创建分组，进行对比学习和专项测验
 
 ---
 
@@ -85,65 +166,57 @@ python app.py
 
 ```
 English_Vocab/
-├── app.py                    # 应用入口，Flask 工厂函数
-├── config.py                 # 配置文件（数据库、密钥、学习参数）
-├── models.py                 # 数据模型（6 张表）
-├── spaced_repetition.py      # SM-2 间隔重复算法
-├── seed_data.py              # 预置词汇数据
-├── requirements.txt          # Python 依赖
-├── vocab.db                  # SQLite 数据库（运行时生成）
+├── app.py                     # Flask 应用入口 & 工厂函数
+├── config.py                  # 配置（数据库、学习参数等）
+├── models.py                  # 数据模型（8 张表）
+├── spaced_repetition.py       # SM-2 算法实现
+├── seed_data.py               # 预置词汇数据
+├── requirements.txt
 ├── routes/
-│   ├── __init__.py
-│   ├── main.py               # 首页仪表盘、统计、导入导出页
-│   ├── study.py              # 间隔重复学习
-│   ├── quiz.py               # 选择题 + 拼写测验
-│   ├── words.py              # 单词 CRUD + 搜索
-│   ├── word_books.py         # 单词书管理
-│   ├── wrong_book.py         # 错题本
-│   ├── similar.py            # 形近词识别 & 管理
-│   └── api.py                # JSON API（语音、查词、导入导出）
-├── templates/                # Jinja2 模板（18 个页面）
-├── static/
-│   ├── css/style.css         # 样式
-│   └── audio/                # gTTS 生成的语音文件
-└── venv/                     # 虚拟环境（不纳入版本控制）
+│   ├── main.py                # 首页仪表盘、统计
+│   ├── study.py               # 间隔重复学习
+│   ├── quiz.py                # 选择题 + 拼写题
+│   ├── words.py               # 单词 CRUD + 搜索
+│   ├── word_books.py          # 单词书管理
+│   ├── wrong_book.py          # 错题本
+│   ├── similar.py             # 形近词管理
+│   ├── translation.py         # 翻译练习（AI 评分）
+│   ├── settings.py            # AI 配置设置
+│   ├── api.py                 # JSON API + 在线查词 + AI 对话
+│   └── ai_helper.py           # AI 大模型调用封装
+├── templates/                 # Jinja2 模板（20 个页面）
+└── static/
+    ├── css/style.css          # 全局样式
+    └── audio/                 # TTS 生成音频
 ```
 
-## 🗃️ 数据模型
+---
 
-| 表名 | 说明 |
-|------|------|
-| `words` | 单词（拼写、音标、释义、例句、词性、标签） |
-| `word_books` | 单词书（名称、封面颜色） |
-| `word_book_items` | 单词书 ↔ 单词（多对多关联） |
-| `learning_records` | 学习记录（ease factor、间隔、掌握状态） |
-| `wrong_answers` | 错题记录（题目类型、错误答案、复习状态） |
-| `similar_word_groups` | 形近词组（名称、描述） |
-| `similar_word_items` | 形近词组 ↔ 单词 |
-| `daily_checkins` | 每日打卡（复习数、新词数） |
+## ⚙️ 配置参考
 
-## ⚙️ 配置说明
+| 配置项 | 位置 | 说明 |
+|--------|------|------|
+| AI API Key / 模型 | 设置页面 `/settings` | 存于 SQLite 数据库，不会上传 Git |
+| `WORDS_PER_SESSION` | `config.py` | 每次学习的单词数，默认 20 |
+| `NEW_WORDS_PER_DAY` | `config.py` | 每日新词上限，默认 10 |
+| `SECRET_KEY` | `config.py` 或环境变量 | 生产环境请通过环境变量设置 |
 
-在 [config.py](config.py) 中可调整：
-
-| 配置项 | 默认值 | 说明 |
-|--------|--------|------|
-| `SECRET_KEY` | 环境变量或默认值 | Flask 密钥（生产环境请务必修改） |
-| `DATABASE_URL` | `sqlite:///vocab.db` | 数据库地址 |
-| `WORDS_PER_SESSION` | 20 | 每次学习会话的单词数 |
-| `NEW_WORDS_PER_DAY` | 10 | 每日新词引入上限 |
+---
 
 ## 🧩 技术栈
 
-| 类别 | 技术 |
+| 层级 | 技术 |
 |------|------|
-| Web 框架 | Flask 3.x |
-| ORM | SQLAlchemy（Flask-SQLAlchemy） |
+| 后端 | Flask 3.x + SQLAlchemy 2.0 |
 | 数据库 | SQLite |
-| 语音合成 | gTTS（Google Text-to-Speech） |
-| 编辑距离 | python-Levenshtein |
-| 在线词典 | Free Dictionary API |
+| 前端 | Bootstrap 5.3 + Chart.js 4 + Bootstrap Icons |
+| AI 集成 | DeepSeek / Kimi / 千问 / 豆包 / 智谱（OpenAI 兼容） |
+| 语音 | gTTS（Google Text-to-Speech） |
+| 查词 | Free Dictionary API + MyMemory 翻译 |
+| 算法 | SM-2 间隔重复 + Levenshtein 编辑距离 |
+
+---
 
 ## 📄 License
 
-MIT
+MIT © 2024
