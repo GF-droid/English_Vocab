@@ -320,8 +320,6 @@ def lookup_online():
 
         data = resp.json()
         result = _parse_dict_response(data)
-<<<<<<< HEAD
-=======
 
         # Collect texts to translate in parallel
         from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -356,7 +354,6 @@ def lookup_online():
                 if def_item["definition"] in translations:
                     def_item["translation"] = translations[def_item["definition"]]
 
->>>>>>> c2d2b6d (添加了API导入以及翻译学习功能)
         result["success"] = True
         return jsonify(result)
 
