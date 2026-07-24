@@ -11,53 +11,29 @@
     <div class="col-6 col-md-3"><div class="stat-card streak"><div class="stat-number">{{ not_started }}</div><div class="stat-label">未开始</div></div></div>
 </div>
 
-<div class="row g-4">
-    <!-- Daily trend chart -->
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header bg-white"><h6 class="mb-0">📈 近30天学习趋势</h6></div>
-            <div class="card-body">
-                <div style="position: relative; height: 280px;">
-                    <canvas id="dailyChart"></canvas>
-                </div>
-            </div>
-        </div>
+<div class="row g-2 mb-2">
+    <div class="col-lg-7">
+        <div class="card"><div class="card-header py-1 px-3"><small class="fw-semibold">📈 近30天趋势</small></div>
+        <div class="card-body p-2"><div style="height:190px"><canvas id="dailyChart"></canvas></div></div></div>
     </div>
-
-    <!-- Mastery distribution -->
-    <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-header bg-white"><h6 class="mb-0">🎯 掌握程度分布</h6></div>
-            <div class="card-body">
-                <div style="position: relative; height: 280px;">
-                    <canvas id="masteryChart"></canvas>
-                </div>
-                <div class="mt-3">
-                    <div class="d-flex justify-content-between small">
-                        <span>🟢 已掌握</span><span>{{ mastered }} ({{ (mastered/total_words*100)|round(1) if total_words > 0 else 0 }}%)</span>
-                    </div>
-                    <div class="d-flex justify-content-between small">
-                        <span>🟡 复习中</span><span>{{ reviewing }} ({{ (reviewing/total_words*100)|round(1) if total_words > 0 else 0 }}%)</span>
-                    </div>
-                    <div class="d-flex justify-content-between small">
-                        <span>🔵 学习中</span><span>{{ learning }} ({{ (learning/total_words*100)|round(1) if total_words > 0 else 0 }}%)</span>
-                    </div>
-                    <div class="d-flex justify-content-between small">
-                        <span>⚪ 未开始</span><span>{{ not_started }} ({{ (not_started/total_words*100)|round(1) if total_words > 0 else 0 }}%)</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="col-lg-5">
+        <div class="card"><div class="card-header py-1 px-3"><small class="fw-semibold">🎯 掌握分布</small></div>
+        <div class="card-body p-2">
+            <div class="row g-0 align-items-center"><div class="col-6"><div style="height:160px"><canvas id="masteryChart"></canvas></div></div>
+            <div class="col-6 ps-2 small">
+                <div class="d-flex justify-content-between mb-1"><span>🟢 已掌握</span><span>{{ mastered }}</span></div>
+                <div class="d-flex justify-content-between mb-1"><span>🟡 复习中</span><span>{{ reviewing }}</span></div>
+                <div class="d-flex justify-content-between mb-1"><span>🔵 学习中</span><span>{{ learning }}</span></div>
+                <div class="d-flex justify-content-between"><span>⚪ 未开始</span><span>{{ not_started }}</span></div>
+            </div></div>
+        </div></div>
     </div>
 </div>
 
-<!-- Book progress -->
-<div class="card mt-4">
-    <div class="card-header bg-white"><h6 class="mb-0">📚 各单词书进度</h6></div>
-    <div class="card-body">
-        <div style="position: relative; height: 330px;">
-            <canvas id="bookChart"></canvas>
-        </div>
+<div class="row g-2">
+    <div class="col-lg-7">
+        <div class="card"><div class="card-header py-1 px-3"><small class="fw-semibold">📚 单词书进度</small></div>
+        <div class="card-body p-2"><div style="height:180px"><canvas id="bookChart"></canvas></div></div></div>
     </div>
     <div class="col-lg-5">
         <div class="row g-2">
@@ -82,7 +58,6 @@
 
 {% block extra_scripts %}
 <script>
-// Daily trend chart
 new Chart(document.getElementById('dailyChart'), {
     type: 'line',
     data: {
@@ -96,16 +71,12 @@ new Chart(document.getElementById('dailyChart'), {
         }]
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
-        scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 5 } }
-        }
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 6, font: { size: 10 } } } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 5, font: { size: 10 } } }, x: { ticks: { font: { size: 9 } } } }
     }
 });
 
-// Mastery chart
 new Chart(document.getElementById('masteryChart'), {
     type: 'doughnut',
     data: {
@@ -113,15 +84,13 @@ new Chart(document.getElementById('masteryChart'), {
         datasets: [{ data: [{{ mastered }}, {{ reviewing }}, {{ learning }}, {{ not_started }}], backgroundColor: ['#6aab84', '#c9a554', '#7ba4c9', '#5a5a60'], borderWidth: 0 }]
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: { legend: { position: 'bottom' } }
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: { legend: { display: false } }
     }
 });
 
-// Book progress chart
 const bookData = {{ book_data|tojson }};
-new Chart(bookCtx, {
+new Chart(document.getElementById('bookChart'), {
     type: 'bar',
     data: {
         labels: bookData.map(b => b.name),
@@ -131,13 +100,9 @@ new Chart(bookCtx, {
         ]
     },
     options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
-        scales: {
-            x: { stacked: true },
-            y: { stacked: true, beginAtZero: true }
-        }
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 6, font: { size: 10 } } } },
+        scales: { x: { stacked: true, ticks: { font: { size: 9 } } }, y: { stacked: true, beginAtZero: true, ticks: { font: { size: 10 } } } }
     }
 });
 </script>
