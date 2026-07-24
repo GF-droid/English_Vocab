@@ -2,87 +2,85 @@
 {% block title %}🎯 选择测验模式 — 记单词{% endblock %}
 
 {% block content %}
-<h4 class="mb-4">🎯 选择测验模式</h4>
-<p class="text-muted mb-4">选择一种测验方式来检验你的单词记忆效果。做错的题目会自动记录到错题本中。</p>
+<h5 class="mb-3">🎯 选择测验模式</h5>
 
-<div class="row g-4">
-    <!-- Multiple Choice -->
+<div class="row g-2 mb-3">
     <div class="col-md-6">
+        <form action="{{ url_for('quiz.quiz_mc') }}" method="get">
         <div class="card h-100">
-            <div class="card-body text-center p-5">
-                <div class="fs-1 mb-3">📝</div>
-                <h5>选择题模式</h5>
-                <p class="text-muted">给定单词，从4个选项中选出正确释义</p>
-                <form action="{{ url_for('quiz.quiz_mc') }}" method="get" class="mt-3">
-                    <div class="mb-3">
-                        <label class="form-label">单词范围</label>
-                        <select name="book_id" class="form-select">
+            <div class="card-body text-center p-4">
+                <div class="fs-2 mb-2">📝</div>
+                <h6>选择题模式</h6>
+                <p class="small text-muted">看英文选中文释义，4选1</p>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <select name="book_id" class="form-select form-select-sm">
                             <option value="">全部单词</option>
                             {% for book in get_book_options() %}
-                            <option value="{{ book.id }}">{{ book.name }} ({{ book.word_count }}词)</option>
+                            <option value="{{ book.id }}">{{ book.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">题目数量</label>
-                        <select name="count" class="form-select">
-                            <option value="5">5 题</option>
-                            <option value="10" selected>10 题</option>
-                            <option value="20">20 题</option>
-                            <option value="30">30 题</option>
+                    <div class="col-6">
+                        <select name="count" class="form-select form-select-sm">
+                            <option value="10" selected>10 题</option><option value="20">20 题</option><option value="30">30 题</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-lg w-100">开始选择题测验</button>
-                </form>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">开始选择题</button>
             </div>
         </div>
+        </form>
     </div>
-
-    <!-- Spelling -->
     <div class="col-md-6">
+        <form action="{{ url_for('quiz.quiz_spell') }}" method="get">
         <div class="card h-100">
-            <div class="card-body text-center p-5">
-                <div class="fs-1 mb-3">✍️</div>
-                <h5>拼写模式</h5>
-                <p class="text-muted">看中文释义和听发音，写出正确的英文单词</p>
-                <form action="{{ url_for('quiz.quiz_spell') }}" method="get" class="mt-3">
-                    <div class="mb-3">
-                        <label class="form-label">单词范围</label>
-                        <select name="book_id" class="form-select">
+            <div class="card-body text-center p-4">
+                <div class="fs-2 mb-2">✍️</div>
+                <h6>拼写模式</h6>
+                <p class="small text-muted">看释义默写英文单词</p>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <select name="book_id" class="form-select form-select-sm">
                             <option value="">全部单词</option>
                             {% for book in get_book_options() %}
-                            <option value="{{ book.id }}">{{ book.name }} ({{ book.word_count }}词)</option>
+                            <option value="{{ book.id }}">{{ book.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">题目数量</label>
-                        <select name="count" class="form-select">
-                            <option value="5">5 题</option>
-                            <option value="10" selected>10 题</option>
-                            <option value="20">20 题</option>
+                    <div class="col-6">
+                        <select name="count" class="form-select form-select-sm">
+                            <option value="10" selected>10 题</option><option value="20">20 题</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-success btn-lg w-100">开始拼写测验</button>
-                </form>
+                </div>
+                <button type="submit" class="btn btn-success w-100">开始拼写</button>
             </div>
         </div>
+        </form>
     </div>
+</div>
 
-    <!-- Wrong words re-quiz -->
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body d-flex justify-content-between align-items-center p-4">
-                <div>
-                    <h5 class="mb-1">🔁 错题重测</h5>
-                    <p class="text-muted mb-0">只测试你曾经做错的单词</p>
-                </div>
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('quiz.quiz_mc', wrong_only=1) }}" class="btn btn-outline-primary">选择题重测</a>
-                    <a href="{{ url_for('quiz.quiz_spell', wrong_only=1) }}" class="btn btn-outline-success">拼写重测</a>
-                </div>
+<!-- Quick quiz + tips row -->
+<div class="row g-2">
+    <div class="col-lg-8">
+        <div class="card"><div class="card-body d-flex justify-content-between align-items-center p-3">
+            <div><h6 class="mb-1">🔁 错题重测</h6><p class="small text-muted mb-0">只测做错的单词，针对性巩固</p></div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('quiz.quiz_mc', wrong_only=1) }}" class="btn btn-sm btn-outline-primary">选择题重测</a>
+                <a href="{{ url_for('quiz.quiz_spell', wrong_only=1) }}" class="btn btn-sm btn-outline-success">拼写重测</a>
             </div>
-        </div>
+        </div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card"><div class="card-body p-3">
+            <small class="fw-semibold">💡 测验建议</small>
+            <ul class="small text-muted mb-0 mt-1 ps-3">
+                <li>每天学完后立即测验效果最好</li>
+                <li>错题会自动收录，记得定期回顾</li>
+                <li>选择对应单词书可做单元测验</li>
+            </ul>
+        </div></div>
     </div>
 </div>
 {% endblock %}

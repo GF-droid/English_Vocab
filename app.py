@@ -48,6 +48,14 @@ def create_app():
     import os
     os.makedirs(app.config["AUDIO_DIR"], exist_ok=True)
 
+    # Serve public directory for custom assets
+    from flask import send_from_directory
+    public_dir = os.path.join(os.path.dirname(__file__), "public")
+
+    @app.route("/public/<path:filename>")
+    def public_files(filename):
+        return send_from_directory(public_dir, filename)
+
     return app
 
 

@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *.pyo
 
+.gitignore
+
 # Virtual environment
 venv/
 .venv/
@@ -30,3 +32,5 @@ Thumbs.db
 *.egg-info/
 dist/
 build/
+
+public/

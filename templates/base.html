@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-bs-theme="light">
+<html lang="zh-CN" data-theme="bubei">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,12 +63,13 @@
                     </li>
                 </ul>
                 <div class="d-flex align-items-center gap-1">
+                    <button class="btn btn-sm btn-outline-light" id="themeToggleBtn" title="切换主题">
+                        <i class="bi bi-palette"></i>
+                    </button>
+                    <input type="file" id="bgImageInput" accept="image/*" style="display:none" onchange="setBackground(event)">
                     <a href="{{ url_for('settings.settings_page') }}" class="btn btn-sm btn-outline-light" title="设置">
                         <i class="bi bi-gear"></i>
                     </a>
-                    <button id="themeToggle" class="btn btn-sm btn-outline-light" title="切换夜间模式">
-                        <i class="bi bi-moon-stars"></i>
-                    </button>
                 </div>
             </div>
         </div>
@@ -93,25 +94,145 @@
         {% block content %}{% endblock %}
     </main>
 
+    <div class="theme-menu" id="themeMenu">
+        <button class="theme-item active" data-theme="bubei">
+            <span class="theme-color-dot" style="background:linear-gradient(135deg,#2d6a4f,#40916c)"></span> 不背单词风
+        </button>
+        <button class="theme-item" data-theme="forest">
+            <span class="theme-color-dot" style="background:linear-gradient(135deg,#2d6a44,#52996a)"></span> 森林护眼
+        </button>
+        <button class="theme-item" data-theme="warm">
+            <span class="theme-color-dot" style="background:linear-gradient(135deg,#6b4d2e,#b8862d)"></span> 暖色护眼
+        </button>
+        <button class="theme-item" data-theme="classic-dark">
+            <span class="theme-color-dot" style="background:linear-gradient(135deg,#1f6feb,#58a6ff)"></span> 经典暗色
+        </button>
+        <hr style="border-color:var(--border-color);margin:4px 0">
+        <div class="theme-section-label">🖼️ 背景图片</div>
+        <div id="wallpaperList"></div>
+        <button class="theme-item" onclick="document.getElementById('bgImageInput').click()">
+            <i class="bi bi-cloud-upload"></i> 上传新壁纸...
+        </button>
+        <button class="theme-item" id="resetBgBtn" style="display:none" onclick="resetBackground()">
+            <i class="bi bi-x-circle"></i> 移除背景
+        </button>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
-        // Theme toggle
-        const themeToggle = document.getElementById('themeToggle');
+        // ─── Theme System ───
         const html = document.documentElement;
-        const savedTheme = localStorage.getItem('vocab-theme');
-        if (savedTheme === 'dark') {
-            html.setAttribute('data-bs-theme', 'dark');
-            themeToggle.innerHTML = '<i class="bi bi-sun"></i>';
+        const savedTheme = localStorage.getItem('vocab-theme-v2') || 'bubei';
+        const savedBg = localStorage.getItem('vocab-bg-image');
+
+        function applyTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('vocab-theme-v2', theme);
+            document.querySelectorAll('.theme-item[data-theme]').forEach(item => {
+                item.classList.toggle('active', item.dataset.theme === theme);
+            });
         }
-        themeToggle.addEventListener('click', () => {
-            const current = html.getAttribute('data-bs-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-bs-theme', next);
-            localStorage.setItem('vocab-theme', next);
-            themeToggle.innerHTML = next === 'dark'
-                ? '<i class="bi bi-sun"></i>'
-                : '<i class="bi bi-moon-stars"></i>';
+
+        // ─── Wallpaper management ───
+        function loadWallpapers() {
+            fetch('/api/wallpapers')
+                .then(r => r.json())
+                .then(data => {
+                    const list = document.getElementById('wallpaperList');
+                    if (!data.wallpapers || !data.wallpapers.length) {
+                        list.innerHTML = '<div class="theme-item text-muted" style="cursor:default;font-size:0.78rem">暂无壁纸，点击上传</div>';
+                        return;
+                    }
+                    const currentBg = localStorage.getItem('vocab-bg-image') || '';
+                    list.innerHTML = data.wallpapers.map(w => {
+                        const active = currentBg.includes(w.filename) ? ' active' : '';
+                        return `<button class="theme-item${active}" onclick="selectWallpaper('${w.url}')">
+                            <span class="theme-color-dot" style="background-image:url('${w.url}');background-size:cover"></span> ${w.filename}
+                        </button>`;
+                    }).join('');
+                });
+        }
+
+        function selectWallpaper(url) {
+            document.body.style.setProperty('--bg-image', `url(${url})`);
+            document.body.classList.add('has-bg');
+            localStorage.setItem('vocab-bg-image', url);
+            document.getElementById('resetBgBtn').style.display = '';
+            themeMenu.classList.remove('show');
+            loadWallpapers();
+        }
+
+        function setBackground(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            const iconBtn = document.querySelector('.theme-item .bi-cloud-upload');
+            const btn = iconBtn ? iconBtn.parentElement : null;
+            if (btn) { btn.textContent = '⏳ 上传中...'; btn.disabled = true; }
+
+            fetch('/api/wallpapers/upload', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (btn) { btn.innerHTML = '<i class="bi bi-cloud-upload"></i> 上传新壁纸...'; btn.disabled = false; }
+                    if (data.success) {
+                        selectWallpaper(data.url);
+                    } else {
+                        alert(data.message || '上传失败');
+                    }
+                })
+                .catch(err => {
+                    if (btn) { btn.innerHTML = '<i class="bi bi-cloud-upload"></i> 上传新壁纸...'; btn.disabled = false; }
+                    alert('上传失败: ' + err.message);
+                });
+            e.target.value = '';
+        }
+
+        function resetBackground() {
+            document.body.style.removeProperty('--bg-image');
+            document.body.classList.remove('has-bg');
+            localStorage.removeItem('vocab-bg-image');
+            document.getElementById('resetBgBtn').style.display = 'none';
+            loadWallpapers();
+        }
+
+        // Init
+        applyTheme(savedTheme);
+        if (savedBg) {
+            document.body.style.setProperty('--bg-image', `url(${savedBg})`);
+            document.body.classList.add('has-bg');
+            document.getElementById('resetBgBtn').style.display = '';
+        }
+
+        // ─── Theme menu toggle (pure JS, no Bootstrap dependency) ───
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const themeMenu = document.getElementById('themeMenu');
+
+        themeToggleBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const rect = themeToggleBtn.getBoundingClientRect();
+            themeMenu.style.position = 'fixed';
+            themeMenu.style.top = (rect.bottom + 6) + 'px';
+            themeMenu.style.right = (window.innerWidth - rect.right) + 'px';
+            themeMenu.classList.toggle('show');
+            if (themeMenu.classList.contains('show')) loadWallpapers();
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!themeMenu.contains(e.target) && e.target !== themeToggleBtn) {
+                themeMenu.classList.remove('show');
+            }
+        });
+
+        // Theme selection
+        document.querySelectorAll('.theme-item[data-theme]').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                applyTheme(this.dataset.theme);
+                themeMenu.classList.remove('show');
+            });
         });
     </script>
     {% block extra_scripts %}{% endblock %}

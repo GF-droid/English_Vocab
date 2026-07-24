@@ -2,34 +2,13 @@
 {% block title %}📊 学习统计 — 记单词{% endblock %}
 
 {% block content %}
-<h4 class="mb-4">📊 学习统计</h4>
+<h5 class="mb-3">📊 学习统计</h5>
 
-<!-- Overview stats -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="stat-card mastered">
-            <div class="stat-number">{{ mastered }}</div>
-            <div class="stat-label">已掌握</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card learning">
-            <div class="stat-number">{{ learning + reviewing }}</div>
-            <div class="stat-label">学习中</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card wrong">
-            <div class="stat-number">{{ total_reviews }}</div>
-            <div class="stat-label">总复习次数</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card streak">
-            <div class="stat-number">{{ not_started }}</div>
-            <div class="stat-label">未开始</div>
-        </div>
-    </div>
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3"><div class="stat-card mastered"><div class="stat-number">{{ mastered }}</div><div class="stat-label">已掌握</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card learning"><div class="stat-number">{{ learning + reviewing }}</div><div class="stat-label">学习中</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card wrong"><div class="stat-number">{{ total_reviews }}</div><div class="stat-label">总复习次数</div></div></div>
+    <div class="col-6 col-md-3"><div class="stat-card streak"><div class="stat-number">{{ not_started }}</div><div class="stat-label">未开始</div></div></div>
 </div>
 
 <div class="row g-4">
@@ -38,7 +17,9 @@
         <div class="card">
             <div class="card-header bg-white"><h6 class="mb-0">📈 近30天学习趋势</h6></div>
             <div class="card-body">
-                <canvas id="dailyChart" height="250"></canvas>
+                <div style="position: relative; height: 280px;">
+                    <canvas id="dailyChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -48,7 +29,9 @@
         <div class="card h-100">
             <div class="card-header bg-white"><h6 class="mb-0">🎯 掌握程度分布</h6></div>
             <div class="card-body">
-                <canvas id="masteryChart" height="250"></canvas>
+                <div style="position: relative; height: 280px;">
+                    <canvas id="masteryChart"></canvas>
+                </div>
                 <div class="mt-3">
                     <div class="d-flex justify-content-between small">
                         <span>🟢 已掌握</span><span>{{ mastered }} ({{ (mastered/total_words*100)|round(1) if total_words > 0 else 0 }}%)</span>
@@ -72,49 +55,26 @@
 <div class="card mt-4">
     <div class="card-header bg-white"><h6 class="mb-0">📚 各单词书进度</h6></div>
     <div class="card-body">
-        <canvas id="bookChart" height="300"></canvas>
-    </div>
-</div>
-
-<!-- Wrong answer stats -->
-<div class="row g-3 mt-2">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header bg-white"><h6 class="mb-0">❌ 错题统计</h6></div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>总错题数</span><strong>{{ wrong_total }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>未复习</span><strong class="text-warning">{{ wrong_unreviewed }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>选择题错题</span><strong>{{ wrong_mc }}</strong>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>拼写题错题</span><strong>{{ wrong_spell }}</strong>
-                </div>
-            </div>
+        <div style="position: relative; height: 330px;">
+            <canvas id="bookChart"></canvas>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header bg-white"><h6 class="mb-0">📋 概览</h6></div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>总单词数</span><strong>{{ total_words }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>单词书数</span><strong>{{ total_books }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>总复习次数</span><strong>{{ total_reviews }}</strong>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>掌握率</span>
-                    <strong>{{ (mastered/total_words*100)|round(1) if total_words > 0 else 0 }}%</strong>
-                </div>
-            </div>
+    <div class="col-lg-5">
+        <div class="row g-2">
+            <div class="col-6"><div class="card"><div class="card-header py-1 px-3"><small class="fw-semibold">❌ 错题</small></div>
+            <div class="card-body p-2 small">
+                <div class="d-flex justify-content-between mb-1"><span>总计</span><strong>{{ wrong_total }}</strong></div>
+                <div class="d-flex justify-content-between mb-1"><span>未复习</span><strong class="text-warning">{{ wrong_unreviewed }}</strong></div>
+                <div class="d-flex justify-content-between mb-1"><span>选择题</span><span>{{ wrong_mc }}</span></div>
+                <div class="d-flex justify-content-between"><span>拼写题</span><span>{{ wrong_spell }}</span></div>
+            </div></div></div>
+            <div class="col-6"><div class="card"><div class="card-header py-1 px-3"><small class="fw-semibold">📋 概览</small></div>
+            <div class="card-body p-2 small">
+                <div class="d-flex justify-content-between mb-1"><span>总单词</span><strong>{{ total_words }}</strong></div>
+                <div class="d-flex justify-content-between mb-1"><span>单词书</span><span>{{ total_books }}</span></div>
+                <div class="d-flex justify-content-between mb-1"><span>总复习</span><span>{{ total_reviews }}</span></div>
+                <div class="d-flex justify-content-between"><span>掌握率</span><strong>{{ (mastered/total_words*100)|round(1) if total_words > 0 else 0 }}%</strong></div>
+            </div></div></div>
         </div>
     </div>
 </div>
@@ -123,31 +83,21 @@
 {% block extra_scripts %}
 <script>
 // Daily trend chart
-const dailyCtx = document.getElementById('dailyChart').getContext('2d');
-new Chart(dailyCtx, {
+new Chart(document.getElementById('dailyChart'), {
     type: 'line',
     data: {
         labels: {{ daily_labels|tojson }},
         datasets: [{
-            label: '复习量',
-            data: {{ daily_reviews|tojson }},
-            borderColor: '#667eea',
-            backgroundColor: 'rgba(102,126,234,0.1)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 2,
+            label: '复习量', data: {{ daily_reviews|tojson }},
+            borderColor: '#6aab84', backgroundColor: 'rgba(106,171,132,0.08)', fill: true, tension: 0.3, pointRadius: 0,
         }, {
-            label: '新词量',
-            data: {{ daily_new|tojson }},
-            borderColor: '#38ef7d',
-            backgroundColor: 'rgba(56,239,125,0.1)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 2,
+            label: '新词量', data: {{ daily_new|tojson }},
+            borderColor: '#7ba4c9', backgroundColor: 'rgba(123,164,201,0.08)', fill: true, tension: 0.3, pointRadius: 0,
         }]
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { position: 'bottom' } },
         scales: {
             y: { beginAtZero: true, ticks: { stepSize: 5 } }
@@ -156,42 +106,33 @@ new Chart(dailyCtx, {
 });
 
 // Mastery chart
-const masteryCtx = document.getElementById('masteryChart').getContext('2d');
-new Chart(masteryCtx, {
+new Chart(document.getElementById('masteryChart'), {
     type: 'doughnut',
     data: {
         labels: ['已掌握', '复习中', '学习中', '未开始'],
-        datasets: [{
-            data: [{{ mastered }}, {{ reviewing }}, {{ learning }}, {{ not_started }}],
-            backgroundColor: ['#38ef7d', '#ffd54f', '#4facfe', '#e0e0e0'],
-            borderWidth: 0,
-        }]
+        datasets: [{ data: [{{ mastered }}, {{ reviewing }}, {{ learning }}, {{ not_started }}], backgroundColor: ['#6aab84', '#c9a554', '#7ba4c9', '#5a5a60'], borderWidth: 0 }]
     },
     options: {
         responsive: true,
+        maintainAspectRatio: true,
         plugins: { legend: { position: 'bottom' } }
     }
 });
 
 // Book progress chart
-const bookCtx = document.getElementById('bookChart').getContext('2d');
 const bookData = {{ book_data|tojson }};
 new Chart(bookCtx, {
     type: 'bar',
     data: {
         labels: bookData.map(b => b.name),
-        datasets: [{
-            label: '已学',
-            data: bookData.map(b => b.learned),
-            backgroundColor: '#4facfe',
-        }, {
-            label: '已掌握',
-            data: bookData.map(b => b.mastered),
-            backgroundColor: '#38ef7d',
-        }]
+        datasets: [
+            { label: '已学', data: bookData.map(b => b.learned), backgroundColor: '#7ba4c9' },
+            { label: '已掌握', data: bookData.map(b => b.mastered), backgroundColor: '#6aab84' },
+        ]
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { position: 'bottom' } },
         scales: {
             x: { stacked: true },

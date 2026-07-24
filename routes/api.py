@@ -13,6 +13,57 @@ import requests
 api_bp = Blueprint("api", __name__)
 
 
+# ─── Wallpapers ─────────────────────────────────────────
+
+PUBLIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "public")
+
+
+@api_bp.route("/wallpapers")
+def list_wallpapers():
+    """List all wallpaper images in the public directory."""
+    wallpapers = []
+    if os.path.exists(PUBLIC_DIR):
+        for f in sorted(os.listdir(PUBLIC_DIR)):
+            if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif')):
+                wallpapers.append({
+                    "filename": f,
+                    "url": f"/public/{f}",
+                })
+    return jsonify({"success": True, "wallpapers": wallpapers})
+
+
+@api_bp.route("/wallpapers/upload", methods=["POST"])
+def upload_wallpaper():
+    """Upload a wallpaper image to the public directory."""
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"success": False, "message": "请选择文件"})
+
+    filename = file.filename
+    if not filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif')):
+        return jsonify({"success": False, "message": "仅支持 JPG/PNG/WebP/GIF 格式"})
+
+    os.makedirs(PUBLIC_DIR, exist_ok=True)
+
+    # Avoid overwriting: add number suffix if exists
+    save_path = os.path.join(PUBLIC_DIR, filename)
+    base, ext = os.path.splitext(filename)
+    counter = 1
+    while os.path.exists(save_path):
+        save_path = os.path.join(PUBLIC_DIR, f"{base}_{counter}{ext}")
+        counter += 1
+
+    file.save(save_path)
+    saved_name = os.path.basename(save_path)
+
+    return jsonify({
+        "success": True,
+        "filename": saved_name,
+        "url": f"/public/{saved_name}",
+        "message": "壁纸已上传",
+    })
+
+
 # ─── Audio ──────────────────────────────────────────────
 
 @api_bp.route("/audio/<int:word_id>")
